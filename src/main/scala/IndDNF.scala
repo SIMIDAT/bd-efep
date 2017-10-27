@@ -496,7 +496,7 @@ def this(length: Int, neje: Int, nobj: Int, Variables: TableVar, clas: Int) {
     if(disparoCrisp > 0){
       //cubre.set(index toInt)
       mat.ejAntCrisp += 1
-      mat.coveredExamples += index
+      //mat.coveredExamples += index
       if(data.getClas == this.clas){
         mat.ejAntClassCrisp += 1
         mat.tp += 1

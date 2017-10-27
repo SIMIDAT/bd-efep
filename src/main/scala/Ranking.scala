@@ -1,3 +1,5 @@
+import scala.collection.mutable.ArrayBuffer
+
 /**
   * Created by fpulgar on 1/6/15.
   */
@@ -35,16 +37,74 @@ class Ranking extends Serializable {
     val dominateMe: Array[Int] = new Array[Int](pop.getNumIndiv)
 
     // iDominate[k] contains the list of solutions dominated by k
-    val iDominate: Array[List[Int]] = new Array[List[Int]](pop.getNumIndiv)
+    val iDominate: Array[ArrayBuffer[Int]] = new Array[ArrayBuffer[Int]](pop.getNumIndiv)
 
     // front[i] contains the list of individuals belonging to the front i
-    val front: Array[List[Int]] = new Array[List[Int]](pop.getNumIndiv+1)
+    val front: Array[ArrayBuffer[Int]] = new Array[ArrayBuffer[Int]](pop.getNumIndiv+1)
 
     // Initialize the fronts
-    (0 until front.length).foreach(i => front(i)= List ())
+
+    for(i <- 0 until front.length)
+      front(i) = new ArrayBuffer[Int]()
+
+    // Fast non dominated sorting
+    for(p <- 0 until pop.getNumIndiv){
+      iDominate(p) = new ArrayBuffer[Int]()
+      dominateMe(p) = 0
+
+      for(q <- 0 until pop.getNumIndiv){
+        val flagDominate = compareDominance(pop.getIndiv(p), p, pop.getIndiv(q), q,nobj, SDomin)
+        if (flagDominate == -1) {
+          iDominate(p) += q
+        } else if (flagDominate == 1){
+          dominateMe(p) += 1
+        } else {
+          iDominate(p) += q
+        }
+      }
+
+      // If nobody dominates p, p belongs to the first front
+      if(dominateMe(p) == 0){
+        front(0) += p
+        pop.getIndiv(p).setRank(0)
+      }
+    }
+
+    // Obtain the rest of fronts
+    var i: Int = 0
+    while(front(i).nonEmpty){
+      i += 1
+      val it1 = front(i-1).iterator
+      while(it1.hasNext){
+        val it2 = iDominate(it1.next()).iterator
+        while(it2.hasNext){
+          val index = it2.next()
+          dominateMe(index) -= 1
+          if(dominateMe(index) == 0){
+            front(i) += index
+            pop.getIndiv(index).setRank(i)
+          }
+        }
+      }
+    }
+
+    ranking = new Array[Population](i)
+
+    (0 until i).foreach(j => {
+      ranking(j) = new Population(front(j).length, Variables.getNVars, nobj, neje, RulRep, Variables)
+
+      val it1 = front(j).iterator
+      var contador = 0
+      it1.foreach(v1 => {
+        ranking(j).CopyIndiv(contador, neje, nobj, pop.getIndiv(v1))
+        contador += 1
+      })
+    })
+
+    //(0 until front.length).foreach(i => front(i)= List ())
 
     // Fast non dominated sorting algorithm
-    front(0)= (0 until pop.getNumIndiv).map(p => {
+    /*front(0)= (0 until pop.getNumIndiv).map(p => {
 
       // Initialice the list of individuals that i dominate and the number
       // of individuals that dominate me
@@ -59,9 +119,9 @@ class Ranking extends Serializable {
         //}
 
         if (flagDominate == -1) {
-          (0,List(q))
+          iDominate(p)
         } else if (flagDominate == 1){
-          (1,List())
+          dominateMe(p) += 1
         } else {
           (0,List(q))
         }
@@ -107,7 +167,7 @@ class Ranking extends Serializable {
         ranking(j).CopyIndiv(contador,neje,nobj,pop.getIndiv(v1))
         contador+=1
       })
-    })
+    })*/
   } // Ranking
 
   /**

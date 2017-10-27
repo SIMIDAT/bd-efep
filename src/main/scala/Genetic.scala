@@ -393,12 +393,12 @@ class Genetic extends Serializable {
     union.foreach(pop => {
       var j = 0
       for (i <- 0 until poblac(k).getNumIndiv) {
-        //pop.CopyIndiv(i, neje, num_objetivos, poblac(k).getIndiv(i))
-        pop.indivi(i) = poblac(k).getIndiv(i)
+        pop.CopyIndiv(i, neje, num_objetivos, poblac(k).getIndiv(i))
+        //pop.indivi(i) = poblac(k).getIndiv(i)
       }
       for (i <- poblac(k).getNumIndiv until pop.getNumIndiv) {
-        //pop.CopyIndiv(i, neje, num_objetivos, offspring(k).getIndiv(j))
-        pop.indivi(i) = offspring(k).getIndiv(j)
+        pop.CopyIndiv(i, neje, num_objetivos, offspring(k).getIndiv(j))
+        //pop.indivi(i) = offspring(k).getIndiv(j)
         j += 1
       }
       k += 1
@@ -897,7 +897,7 @@ class Genetic extends Serializable {
             // Join all individuals in union into a single population
             union.foreach(p => {
               p.indivi.foreach(ind => {
-                P_t.CopyIndiv(count, Examples.getNEx, num_objetivos, ind)
+                P_t.indivi(count) = ind
                 count += 1
               })
             })
