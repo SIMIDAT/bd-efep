@@ -15,6 +15,7 @@ import java.util._
 
 import org.apache.spark.SparkContext
 import org.apache.spark.broadcast.Broadcast
+import org.apache.spark.sql.execution.datasources.parquet.ParquetOptions
 
 class Genetic extends Serializable {
   /**
@@ -392,10 +393,12 @@ class Genetic extends Serializable {
     union.foreach(pop => {
       var j = 0
       for (i <- 0 until poblac(k).getNumIndiv) {
-        pop.CopyIndiv(i, neje, num_objetivos, poblac(k).getIndiv(i))
+        //pop.CopyIndiv(i, neje, num_objetivos, poblac(k).getIndiv(i))
+        pop.indivi(i) = poblac(k).getIndiv(i)
       }
       for (i <- poblac(k).getNumIndiv until pop.getNumIndiv) {
-        pop.CopyIndiv(i, neje, num_objetivos, offspring(k).getIndiv(j))
+        //pop.CopyIndiv(i, neje, num_objetivos, offspring(k).getIndiv(j))
+        pop.indivi(i) = offspring(k).getIndiv(j)
         j += 1
       }
       k += 1
@@ -728,8 +731,12 @@ class Genetic extends Serializable {
     val porcVar = 0.25.toFloat
     val porcPob = 0.75.toFloat
     best = new Array[Population](Variables.value.getNClass)
+
     //indivPerClass = long_poblacion / Variables.getNClass // Individuals per class exactly
     val modulus: Int = long_poblacion % Variables.value.getNClass // If the division is not exact, some classes must have an extra in
+
+    // Auxiliar population to calculate individuals in MapReduce
+    val auxPop: Population = new Population(long_poblacion * Variables.value.getNClass, Variables.value.getNVars, num_objetivos, Examples.getNEx, RulesRep, Variables.value)
 
 
     // Initialises the population
@@ -740,6 +747,8 @@ class Genetic extends Serializable {
     for(i <- 0 until Variables.value.getNClass) {
       // Initialises the population of each class
       poblac(i) = new Population(long_poblacion, Variables.value.getNVars, num_objetivos, Examples.getNEx, RulesRep, Variables.value)
+      offspring(i) = new Population(long_poblacion, Variables.value.getNVars, num_objetivos, Examples.getNEx, RulesRep, Variables.value)
+      union(i) = new Population(2 * long_poblacion, Variables.value.getNVars, num_objetivos, Examples.getNEx, RulesRep, Variables.value)
 
       // Biased initialisation of individuals
       poblac(i).BsdInitPob(Variables.value, porcVar, porcPob, Examples.getNEx, i, nFile)
@@ -749,21 +758,23 @@ class Genetic extends Serializable {
     Gen = 0
 
     //Evaluates the population for the first time
-    Trials += poblac.map(p => p.evalPop(this, Variables, Examples,sc)).sum
+    var count: Int = 0
+    poblac.foreach(pop => {
+      pop.indivi.foreach(ind =>{
+        auxPop.indivi(count) = ind
+        count += 1
+      })
+    })
+    Trials += auxPop.evalPop(this, Variables, Examples, sc)
+
+
 
     do {
           // GA General cycle
           Gen += 1
           // Creates offspring and union
-          for(i <- offspring.indices)
-            offspring(i) = new Population(long_poblacion, Variables.value.getNVars, num_objetivos, Examples.getNEx, RulesRep, Variables.value)
-
-          for(i <- union.indices){
-              union(i) = new Population(2 * long_poblacion, Variables.value.getNVars, num_objetivos, Examples.getNEx, RulesRep, Variables.value)
-          }
 
           // Apply the genetic operators on individuals of the same class
-
           for(clas <- poblac.indices) {
             for (conta <- 0 until (poblac(clas).getNumIndiv / 2)) {
               //val clas = Randomize.Randint(0, poblac.length) // Select the class first
@@ -793,16 +804,23 @@ class Genetic extends Serializable {
             }
           }
 
-
-
             // Evaluates the offspring
-            Trials += offspring.map(p => p.evalPop(this, Variables, Examples,sc)).sum
+            count = 0
+            offspring.foreach(pop => {
+              pop.indivi.foreach(ind =>{
+                auxPop.indivi(count) = ind
+                count += 1
+              })
+            })
+            Trials += auxPop.evalPop(this, Variables, Examples, sc)
+            //Trials += offspring.map(p => p.evalPop(this, Variables, Examples,sc)).sum
 
             // Join population and offspring in union population
             JoinTemp(Examples.getNEx)
 
           var ranking: Ranking = null
           if(frontOrdering equalsIgnoreCase "ByClass") {
+
             // Now, for each class in union:
             // - Makes the ranking by the fast non-dominance sorting algorithm
             // - Check if the individuals of the same class evolves. If not:

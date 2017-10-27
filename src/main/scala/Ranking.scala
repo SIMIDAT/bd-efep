@@ -41,20 +41,22 @@ class Ranking extends Serializable {
     val front: Array[List[Int]] = new Array[List[Int]](pop.getNumIndiv+1)
 
     // Initialize the fronts
-    (0 to front.length -1).foreach(i => front(i)= List ())
+    (0 until front.length).foreach(i => front(i)= List ())
 
     // Fast non dominated sorting algorithm
-    front(0)=(0 to pop.getNumIndiv-1).map(p => {
+    front(0)= (0 until pop.getNumIndiv).map(p => {
+
       // Initialice the list of individuals that i dominate and the number
       // of individuals that dominate me
+
       // For all q individuals , calculate if p dominates q or vice versa
-      val aux = (0 to pop.getNumIndiv-1).map(q => {
+      val aux = (0 until pop.getNumIndiv).map(q => {
 
-        var flagDominate = compareConstraint(pop.getIndiv(p), pop.getIndiv(q))
+        //var flagDominate = compareConstraint(pop.getIndiv(p), pop.getIndiv(q))
 
-        if (flagDominate == 0) {
-          flagDominate = compareDominance(pop.getIndiv(p), p, pop.getIndiv(q), q,nobj, SDomin)
-        }
+        //if (flagDominate == 0) {
+          val flagDominate = compareDominance(pop.getIndiv(p), p, pop.getIndiv(q), q,nobj, SDomin)
+        //}
 
         if (flagDominate == -1) {
           (0,List(q))
@@ -63,7 +65,7 @@ class Ranking extends Serializable {
         } else {
           (0,List(q))
         }
-      }).reduce((a,b)=>(a._1+b._1,a._2:::b._2))
+      }).reduce((a,b)=> (a._1+b._1,a._2:::b._2))
 
       iDominate(p) = aux._2
       dominateMe(p) = aux._1
@@ -96,7 +98,7 @@ class Ranking extends Serializable {
 
     ranking = new Array[Population](i)
 
-    (0 to i-1).foreach(j => {
+    (0 until i).foreach(j => {
       ranking(j) = new Population(front(j).length, Variables.getNVars, nobj, neje, RulRep, Variables)
 
       val it1 = front(j).iterator

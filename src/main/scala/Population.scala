@@ -46,7 +46,7 @@ class Population extends Serializable {
     num_indiv = numind
     num_used = 0
 
-      indivi = Array.fill[Individual](numind)(new IndDNF(numgen, neje, nobj, Variables, 0))
+      indivi = Array.fill[Individual](numind)(new IndDNF(numgen, neje, nobj, Variables,0))
 
     ej_cubiertos = new BitSet(neje)
     ult_cambio_eval = 0
@@ -101,12 +101,17 @@ class Population extends Serializable {
     var trials = 0
     var i = 0
     val neje = Examples.getNEx
+
+    // The number of trials is the number of non-evaluated individuals
+    trials = indivi.count(y => {!y.getIndivEvaluated})
+
     // EvalInd in the map. Reduce takes the number of trials and return
     /*indivi.filter(y => !y.getIndivEvaluated).map(ind => {
       ind.evalInd(AG, Variables, Examples)
       ind.setNEval(AG.getTrials)
       1
     }).sum*/
+
 
     // AQUI HAY QUE METER MAS ADELANTE BIG DATA
     val indivsToEval = indivi.filter(y => !y.getIndivEvaluated)
@@ -121,8 +126,7 @@ class Population extends Serializable {
         val data = d._2
         val index = d._1
         for (i <- inds.value.indices){
-          val individual = inds.value(i)
-          matrices(i) = matrices(i) + individual.evalExample(Variables, data, index)
+          matrices(i) = matrices(i) + inds.value(i).evalExample(Variables, data, index)
         }
       }
 
@@ -158,8 +162,7 @@ class Population extends Serializable {
       indivsToEval(i).computeQualityMeasures(confusionMatrices(i),AG, Examples, Variables.value)
     }
 
-    // The number of trials is the number of non-evaluated individuals
-    trials = indivi.count(y => {!y.getIndivEvaluated})
+
 
     // Sets all individuals as evaluated
     var k = trials
