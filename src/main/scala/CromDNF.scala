@@ -7,6 +7,8 @@
   *        </p>
   */
 
+import java.util
+
 import org.core._
 
 /**
@@ -90,70 +92,75 @@ class CromDNF extends Serializable {
     * @return The value of the class for the example covered, in order to be represented in the chromosome
     */
   def CobInitCrom(pop: Population, Variables: TableVar, Examples: TableDat, porcCob: Float, nobj: Int, clas: Int): Int = {
-  /*
-    val crom_inic = Array.fill[Boolean](num_genes)(false)
+    var num_var: Int = 0
+    val crom_inic = new util.BitSet(num_genes)
+    crom_inic.clear(0,num_genes)
 
     // Number of participating variables in the chromosome
-    val numInterv = Randomize.RandintClosed(1, Math.round(porcCob * Variables.getNVars))
 
-    // Get an example not covered yet to create individuals that covers it
+    val numInterv = Randomize.Randint(1, Math.round(porcCob * Variables.getNVars))
     var centi = false
     var aleatorio: Int = 0
-    var ii = 0
-    while ((!centi) && (ii < Examples.getNEx)) {
-      aleatorio = Randomize.RandintClosed(0, Examples.getNEx - 1)
-      if (pop.ej_cubiertos.get(aleatorio) && (Examples.getClass(aleatorio) == clas ))
+    var ii: Int = 0
+
+    // Search an example not covered and for the objective class
+    while((!centi) && (ii < Examples.getNEx)){
+      aleatorio = Randomize.RandintClosed(0,Examples.getNEx -1)
+      if(!(pop.ej_cubiertos.get(aleatorio)) && (Examples.getClass(aleatorio) == clas)){
         centi = true
+      }
       ii += 1
     }
 
-    for (v <- 0 until numInterv) {
-      val num_var = Randomize.RandintClosed(0, num_genes - 1)
-
-      // If the variable is not in the chromosome
-      if (! crom_inic(num_var)) {
-        if (Variables.getContinuous(num_var)) {
-          //Continuous variable
-          // Get the interval of tha variable that correspond to the example value
+    // In aleatorio we store the example to initiate the chromosome
+    var `var` = 0
+    val data: TypeDat = Examples.datosRDD.lookup(aleatorio.toLong).apply(0)
+    while ( `var` < numInterv) {
+      num_var = Randomize.Randint(0, num_genes - 1)
+      if (! crom_inic.get(num_var)) {
+        if (Variables.getContinuous(num_var)) { //Continuous variable
+          // Put in the correspondent interval //
           var pertenencia: Float = 0
-          var interv = Variables.getNLabelVar(num_var)
-          for(i <- 0 until Variables.getNLabelVar(num_var)) {
-              val new_pert = Variables.Fuzzy(num_var, i, Examples.getDat(aleatorio, num_var))
-              if (new_pert > pertenencia) {
-                interv = i
-                pertenencia = new_pert
-              }
+          var new_pert: Float = 0
+          var interv: Int = Variables.getNLabelVar(num_var)
+
+          for (i <- 0 until Variables.getNLabelVar(num_var)){
+            new_pert = Variables.Fuzzy(num_var, i, data.getDat(num_var))
+            if (new_pert > pertenencia) {
+              interv = i
+              pertenencia = new_pert
+            }
           }
-
-          // Initialise the gene on this interval (this interval to 1, the rest to 0)
           val number = Variables.getNLabelVar(num_var)
-          cromosoma(num_var).NoTakeInitGene
-          this.setCromGeneElem(num_var, interv, true)
-          this.setCromGeneElem(num_var, number, true)
+          for(l <- 0 to number){
+            if (l != num_var)
+              setCromGeneElem(num_var, l, false)
+          }
+          setCromGeneElem(num_var, interv, true)
+          setCromGeneElem(num_var, number, true)
 
-        } else {
-
-          //Discrete variable
+        } else { //Discrete variable
           // Put in the correspondent value //
           val number = Variables.getNLabelVar(num_var)
-          cromosoma(num_var).NoTakeInitGene
-          this.setCromGeneElem(num_var, Examples.getDat(aleatorio, num_var).toInt, true)
-          this.setCromGeneElem(num_var, number, true)
+          for(l <- 0 to number){
+            if (l != num_var) setCromGeneElem(num_var, l, false)
+          }
+          setCromGeneElem(num_var, data.getDat(num_var).toInt, true)
+          setCromGeneElem(num_var, number, true)
         }
-        crom_inic(num_var) = true
+        crom_inic.set(num_var)
+        `var` += 1
       }
     }
-
     // Initialise the rest variables
-    for(i <- crom_inic.indices){
-      if(!crom_inic(i)){
+    for(i <- 0 until num_genes){
+      if(!crom_inic.get(i)){
         cromosoma(i).NoTakeInitGene
       }
     }
 
-    // Return the class of the individual covered to be represented in the rule
-    Examples.getClass(aleatorio)*/
-    1
+    // Return
+    clas
   }
 
   /**
@@ -217,10 +224,8 @@ class CromDNF extends Serializable {
         contents += "\n"
     }
 
-    if (nFile eq "")
-      print(contents)
-    else
-      File.AddtoFile(nFile, contents)
+      println(contents)
+
   }
 
 

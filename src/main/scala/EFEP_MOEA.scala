@@ -635,9 +635,9 @@ object EFEP_MOEA {
     result.evalPop(AG,broadcastVariables, Ejemplos,sc)
 
     //If imbalanced mode is selected, then get only the patterns of the minority class
-    if(imbalanced){
+    /*if(imbalanced){
       result.setNumIndiv(result.indivi.length)
-    }
+    }*/
 
     // Filter rules if neccesary and write rules to file
     //if (confidence_filter)

@@ -473,7 +473,7 @@ def this(length: Int, neje: Int, nobj: Int, Variables: TableVar, clas: Int) {
       if (!Variables.value.getContinuous(i)) {
         // Discrete variables
         if (cromosoma.getCromGeneElem(i, Variables.value.getNLabelVar(i))) {
-          if (!cromosoma.getCromGeneElem(i, data.getDat(i).toInt) && data.getLost(Variables, 0, i)) {
+          if (!cromosoma.getCromGeneElem(i, data.getDat(i).toInt) && !data.getLost(Variables, 0, i)) {
             disparoCrisp = 0
           }
         } else {
@@ -494,7 +494,7 @@ def this(length: Int, neje: Int, nobj: Int, Variables: TableVar, clas: Int) {
     }
 
     if(disparoCrisp > 0){
-      //cubre.set(index toInt)
+      cubre.set(index toInt)
       mat.ejAntCrisp += 1
       //mat.coveredExamples += index
       if(data.getClas == this.clas){

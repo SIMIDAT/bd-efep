@@ -41,20 +41,20 @@ class ConfusionMatrix(neje: Int) extends Serializable{
   /**
     * Values for the confusion matrix
     */
-  var tp: Int = 0
-  var tn: Int = 0
-  var fp: Int = 0
-  var fn: Int = 0
+  var tp: Float = 0
+  var tn: Float = 0
+  var fp: Float = 0
+  var fn: Float = 0
 
 
   /**
     * Other values
     */
-  var ejAntCrisp: Int = 0                // Number of compatible examples with the antecedent of any class - crisp version
-  var ejAntClassCrisp: Int = 0           // Number of compatible examples (antecedent and class) - crisp version
-  var ejAntNoClassCrisp: Int = 0         // Number of compatible examples (antecedent and NOT class) - crisp version
-  var ejAntClassNewCrisp: Int = 0        // Number of new covered compatible examples (antec and class) - crisp version
-  var numVarNoInterv: Int = 0
+  var ejAntCrisp: Float = 0                // Number of compatible examples with the antecedent of any class - crisp version
+  var ejAntClassCrisp: Float = 0           // Number of compatible examples (antecedent and class) - crisp version
+  var ejAntNoClassCrisp: Float = 0         // Number of compatible examples (antecedent and NOT class) - crisp version
+  var ejAntClassNewCrisp: Float = 0        // Number of new covered compatible examples (antec and class) - crisp version
+  var numVarNoInterv: Float = 0
   var gradoCompAntFuzzy: Float = 0           // Total compatibility degree with the antecedent - fuzzy version
   var gradoCompAntClassFuzzy: Float = 0      // Tot compatibility degree with antecedent and class - fuzzy version
 

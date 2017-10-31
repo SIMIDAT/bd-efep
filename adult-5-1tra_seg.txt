@@ -20,5 +20,5 @@ Percentage of the ReInitCob: 0.5
 Minimum confidence threshold: 0.6
 One per Class: yes
 Number of objetives: 2
-	Objetive 0: MEDGEO
-	Objetive 1: TPR_FPR_DIFF
+	Objetive 0: TPR
+	Objetive 1: MINIMIZE_FPR

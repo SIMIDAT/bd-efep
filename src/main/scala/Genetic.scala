@@ -978,8 +978,9 @@ class Genetic extends Serializable {
 
 
             for(clas <- poblac.indices){
+              poblac(clas) = ReInitCoverage(poblac(clas), Variables.value, Examples, nFile)
             // Gets the best population
-              if (Gen == 1) {
+              /*if (Gen == 1) {
                 // if it is the first generation, best is the actual one.
                 best(clas) = new Population(poblac(clas).getNumIndiv, Variables.value.getNVars, num_objetivos, Examples.getNEx, RulesRep, Variables.value)
 
@@ -1013,33 +1014,32 @@ class Genetic extends Serializable {
                       best(clas) = aux
                       best(clas).ult_cambio_eval = Gen
                     }*/
-                  }
+                  }*/
 
               }
 
               // Re-initialisation based on coverage
               //if (getReInitCob.compareTo("yes") == 0)
-                //poblac(clas) = ReInitCoverage(poblac(clas), Variables, Examples, nFile)
 
-            } // if
+
+            //} // if
 
       } while (Trials <= n_eval)
 
-    // now, apply the token competition to get the best population.
-      /*for(i <- poblac.indices) {
-        val ranking = new Ranking(poblac(i), Variables, num_objetivos, Examples.getNEx, RulesRep, StrictDominance)
+    // Evaluate for the last time the population
 
-        val join = ranking.getSubfront(0).join(best(i), Examples, Variables, this)
-        val aux: Population = join.tokenCompetition(Examples, Variables, this, true)
-        if(best(i).getGlobalWRAcc < aux.getGlobalWRAcc){
-          best(i) = aux
-        } else if(best(i).getGlobalWRAcc == aux.getGlobalWRAcc && aux.getNumIndiv < best(i).getNumIndiv) {
-          best(i) = aux
-        }
-      }*/
+    val auxiliar: Population = new Population(long_poblacion * Variables.value.getNClass, Variables.value.getNVars, num_objetivos, Examples.getNEx, RulesRep, Variables.value)
+    count = 0
+    poblac.foreach(pop => {
+      pop.indivi.foreach(ind =>{
+        auxiliar.indivi(count) = ind
+        count += 1
+      })
+    })
+    Trials += auxiliar.evalPop(this, Variables, Examples, sc)
 
     // Extract all rules in best in order to have only one population
-    var k = 0
+    /*var k = 0
     val indivsFinal = best.map(p => p.getNumIndiv).sum
     val result = new Population(indivsFinal, Variables.value.getNVars, num_objetivos, Examples.getNEx, RulesRep, Variables.value)
     best.foreach(pob => {
@@ -1048,17 +1048,21 @@ class Genetic extends Serializable {
         k += 1
       })
     })
-    result.ult_cambio_eval = best.map(i => i.ult_cambio_eval).max
+    result.ult_cambio_eval = best.map(i => i.ult_cambio_eval).max*/
 
     contents = "\nGenetic Algorithm execution finished\n"
       contents += "\tNumber of Generations = " + Gen + "\n"
       contents += "\tNumber of Evaluations = " + Trials + "\n"
-      File.AddtoFile(nFile, contents)
+    println(contents)
+    //File.AddtoFile(nFile, contents)
 
     //return ranking.getSubfront(0);
     // Mirar si hacer así o no...
     //result.tokenCompetition(Examples, Variables, this)
-    result
+    //result
+
+    // Return the population after the token competition
+    auxiliar.tokenCompetition(Examples, Variables.value, this)
     }
 
     /**
@@ -1091,8 +1095,8 @@ class Genetic extends Serializable {
               indi = new IndDNF(Variables.getNVars, Examples.getNEx, num_objetivos, Variables, poblac.getIndiv(conta).getClas)
 
             indi.CobInitInd(poblac, Variables, Examples, porcCob, num_objetivos, poblac.getClass(0), nFile)
-            indi.evalInd(this, Variables, Examples)
-            indi.setIndivEvaluated(true)
+            //indi.evalInd(this, Variables, Examples)
+            indi.setIndivEvaluated(false)
             indi.setNEval(Trials)
             Trials += 1
             // Copy the individual in the population

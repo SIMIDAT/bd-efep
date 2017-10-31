@@ -159,6 +159,7 @@ class Population extends Serializable {
 
     // Now we have the complete confusion matrices of all individuals. Calculate their measures!!
     for(i <- indivsToEval.indices){
+      //indivsToEval(i).Print("")
       indivsToEval(i).computeQualityMeasures(confusionMatrices(i),AG, Examples, Variables.value)
     }
 
@@ -316,7 +317,7 @@ class Population extends Serializable {
       indivi.foreach(ind => {
         // for each rule
         if (ind.getRank == 0) {
-          //ej_cubiertos.or(ind.cubre)
+          ej_cubiertos.or(ind.cubre)
         }
     })
 
@@ -358,6 +359,7 @@ class Population extends Serializable {
   /**
     * Apply the token competition procedure to this population.
     *
+    *
     * NOTE: The population must be evaluated before calling this method.
     *
     * @param Examples  the Examples of the dataset
@@ -365,12 +367,18 @@ class Population extends Serializable {
     * @param GA        the actual genetic algorithm execution
     * @return A new population with the token competition applied
     */
-  def tokenCompetition(Examples: TableDat, Variables: TableVar, GA: Genetic, tokensClass: Boolean): Population = {
+  def tokenCompetition(Examples: TableDat, Variables: TableVar, GA: Genetic): Population = {
     // Sort population by the diversity function
-    /*val actual: Population = sortByDiversity(Examples, Variables, GA)
-    val rules: ArrayBuffer[Individual] = new ArrayBuffer[Individual]
+    val actual: Population = sortByDiversity(Examples, Variables, GA)
+
+
     // Indivuals to add in new population
+    val rules: ArrayBuffer[Individual] = new ArrayBuffer[Individual]
+
     val tokens: BitSet = new BitSet(Examples.getNEx)
+
+
+
 
     var conta = 0
     var todosCubiertos = false
@@ -380,19 +388,13 @@ class Population extends Serializable {
       val cubiertoRegla = actual.indivi(conta).cubre
       var cubreNuevo = false
       val clas = actual.indivi(conta).getClas
+
+
       for (i <-0 until cubiertoRegla.size()) {
-        if(!tokensClass) {
-          // Get all possible tokens
-          if (!tokens.get(i) && cubiertoRegla.get(i)) {
-            tokens.set(i)
-            cubreNuevo = true
-          }
-        } else {
           // Get only the tokens of its class
           if(!tokens.get(i) && cubiertoRegla.get(i) && Examples.getClass(i) == clas){
             tokens.set(i)
             cubreNuevo = true
-          }
         }
       }
 
@@ -414,8 +416,7 @@ class Population extends Serializable {
         result.CopyIndiv(i, Examples.getNEx, GA.getNumObjectives, rules(i))
     }
     result
-    */
-    new Population()
+
   }
 
 
