@@ -1081,7 +1081,7 @@ class Genetic extends Serializable {
       poblac.examplesCoverPopulation(Examples.getNEx, Trials)
 
       // Checks the difference between the last and actual evaluations
-      val porc_cambio = (n_eval * 5) / 100
+      val porc_cambio = n_eval / 10
       if ((Trials - poblac.getLastChangeEval) >= porc_cambio) {
         //            Vector marcas;
         //            if (RulesRep.compareTo("CAN") == 0) {
@@ -1090,7 +1090,19 @@ class Genetic extends Serializable {
         //                marcas = RemoveRepeatedDNF(poblac, Variables);
         //            }
         // Generates new individuals
-        for(conta <- 0 until poblac.getNumIndiv) {
+
+        // First, do token competition to keep high quality rules
+        val pob = poblac.tokenCompetition(Examples, Variables, this)
+
+        // Add the individuals in poblac
+        var count = 0
+        pob.indivi.foreach(ind => {
+          poblac.CopyIndiv(count, Examples.getNEx, this.getNumObjectives,ind)
+          count += 1
+        })
+
+        // fill the remaining individuals by a reinitialization based on coberture
+        for(conta <-  count until poblac.getNumIndiv) {
             var indi: Individual = null
               indi = new IndDNF(Variables.getNVars, Examples.getNEx, num_objetivos, Variables, poblac.getIndiv(conta).getClas)
 
