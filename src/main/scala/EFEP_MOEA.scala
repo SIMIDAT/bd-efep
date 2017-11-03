@@ -645,7 +645,7 @@ object EFEP_MOEA {
     //WriteRule(result, AG.getNumObjectives, NameRule, NameMeasure,  cab_measure_file)
 
     // Save the .tra file
-    AG.CalcPobOutput(output_file_tra, result, Ejemplos, Variables, classification_type, classNames, Data.getHeader)
+    //AG.CalcPobOutput(output_file_tra, result, Ejemplos, Variables, classification_type, classNames, Data.getHeader)
 
 
     /*int maximumInd = -1;
@@ -689,7 +689,7 @@ object EFEP_MOEA {
     //val confPop = new Population(confidence.length, Variables.getNVars, AG.getNumObjectives, Ejemplos.getNEx, AG.getRulesRep, Variables)
     //confPop.indivi = confidence
     //WriteRule(confPop,AG.getNumObjectives,confidence_filter_rules, confidence_filter_measure, cab_measure_file)
-    AG.CalcPobOutput(confidence_filter_tra, confPop, Ejemplos, Variables, classification_type,classNames,Data.getHeader)
+    //AG.CalcPobOutput(confidence_filter_tra, confPop, Ejemplos, Variables, classification_type,classNames)
 
     // Now, filter by chi-EPs and save the result
 
@@ -726,7 +726,7 @@ object EFEP_MOEA {
       chiPop = new Population(chiP.length, Variables.getNVars, AG.getNumObjectives, Ejemplos.getNEx, AG.getRulesRep, Variables)
       chiPop.indivi = chiP.toArray
       //WriteRule(chiPop, AG.getNumObjectives, chi_filter_rules, chi_filter_measure, cab_measure_file)
-      AG.CalcPobOutput(chi_filter_tra, chiPop, Ejemplos, Variables, classification_type, classNames, Data.getHeader)
+      //AG.CalcPobOutput(chi_filter_tra, chiPop, Ejemplos, Variables, classification_type, classNames)
     }
 
     var maxPop = new Population()
@@ -758,7 +758,7 @@ object EFEP_MOEA {
       maxPop = new Population(maxP.length, Variables.getNVars, AG.getNumObjectives, Ejemplos.getNEx, AG.getRulesRep, Variables)
       maxPop.indivi = maxP.toArray
       //WriteRule(maxPop, AG.getNumObjectives, max_filter_rules, max_filter_measure, cab_measure_file)
-      AG.CalcPobOutput(max_filter_tra, chiPop, Ejemplos, Variables, classification_type, classNames, Data.getHeader)
+      //AG.CalcPobOutput(max_filter_tra, chiPop, Ejemplos, Variables, classification_type, classNames)
     }
     //        float cnf_min = AG.getMinCnf();
     //        for (int cnf = 0; cnf <= 3; cnf++) {

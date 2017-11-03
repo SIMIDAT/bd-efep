@@ -1083,6 +1083,7 @@ class Genetic extends Serializable {
       // Checks the difference between the last and actual evaluations
       val porc_cambio = n_eval / 10
       if ((Trials - poblac.getLastChangeEval) >= porc_cambio) {
+        //println("HOLAAAA !" + getTrials)
         //            Vector marcas;
         //            if (RulesRep.compareTo("CAN") == 0) {
         //                marcas = RemoveRepeatedCAN(poblac);
@@ -1093,12 +1094,13 @@ class Genetic extends Serializable {
 
         // First, do token competition to keep high quality rules
         val pob = poblac.tokenCompetition(Examples, Variables, this)
-
+        poblac.ej_cubiertos.clear(0,Examples.getNEx)
         // Add the individuals in poblac
         var count = 0
         pob.indivi.foreach(ind => {
           poblac.CopyIndiv(count, Examples.getNEx, this.getNumObjectives,ind)
           count += 1
+          poblac.ej_cubiertos.or(ind.cubre)
         })
 
         // fill the remaining individuals by a reinitialization based on coberture
@@ -1113,14 +1115,8 @@ class Genetic extends Serializable {
             Trials += 1
             // Copy the individual in the population
             poblac.CopyIndiv(conta, Examples.getNEx, num_objetivos, indi)
-            for (j <- 0 until  Examples.getNEx) {
-                if (poblac.getIndiv(conta).getIndivCovered(j) && (!poblac.ej_cubiertos.get(j))) {
-                  poblac.ej_cubiertos.set(j)
-                  poblac.ult_cambio_eval = Trials
-                }
-            }
-
         }
+        poblac.ult_cambio_eval = this.getTrials
       }
 
       poblac

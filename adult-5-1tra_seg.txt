@@ -22,3 +22,8 @@ One per Class: yes
 Number of objetives: 2
 	Objetive 0: TPR
 	Objetive 1: MINIMIZE_FPR
+
+
+Algorithm terminated
+--------------------
+####### Execution time: 43,726 sec.
