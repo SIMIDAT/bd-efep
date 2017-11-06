@@ -672,7 +672,10 @@ object EFEP_MOEA {
     val d: DecimalFormat = new DecimalFormat("0.000")
 
     contents = "Algorithm terminated\n" + "--------------------\n" + "####### Execution time: " + d.format(cadtime) + " sec.\n"
-    println(contents)
+    // Calculate the .tst and the quac file
+    CalculateTest(output_file_tst, qmeasure_file, result, classification_type, AG.getRulesRep, sc)
+
+    /*println(contents)
     File.AddtoFile(seg_file, "\n\n" + contents)
 
     //Calculate the quality measures
@@ -685,7 +688,7 @@ object EFEP_MOEA {
 
     // Filter by min confidence and save the results
     val confidence: Array[Individual] = result.indivi.filter(i => i.medidas.getCnf >= AG.getMinCnf)
-    val confPop = filterByConfidence(result)
+    val confPop = filterByConfidence(result)*/
     //val confPop = new Population(confidence.length, Variables.getNVars, AG.getNumObjectives, Ejemplos.getNEx, AG.getRulesRep, Variables)
     //confPop.indivi = confidence
     //WriteRule(confPop,AG.getNumObjectives,confidence_filter_rules, confidence_filter_measure, cab_measure_file)
@@ -697,7 +700,7 @@ object EFEP_MOEA {
     /******************************************
                   FILTER BY MINIMALS
      *******************************************/
-    var chiPop = new Population()
+    /* var chiPop = new Population()
     if(chi) {
       val marcas = new Array[Boolean](result.getNumIndiv)
       for (i <- 0 until result.getNumIndiv) {
@@ -719,17 +722,17 @@ object EFEP_MOEA {
         if (!marcas(i)) {
           chiP += result.indivi(i)
         }
-      }
+      } */
 
       //************************************************************************
 
-      chiPop = new Population(chiP.length, Variables.getNVars, AG.getNumObjectives, Ejemplos.getNEx, AG.getRulesRep, Variables)
+    /*   chiPop = new Population(chiP.length, Variables.getNVars, AG.getNumObjectives, Ejemplos.getNEx, AG.getRulesRep, Variables)
       chiPop.indivi = chiP.toArray
       //WriteRule(chiPop, AG.getNumObjectives, chi_filter_rules, chi_filter_measure, cab_measure_file)
       //AG.CalcPobOutput(chi_filter_tra, chiPop, Ejemplos, Variables, classification_type, classNames)
-    }
+    }*/
 
-    var maxPop = new Population()
+    /*var maxPop = new Population()
     if(max) {
       val marcas = new Array[Boolean](result.getNumIndiv)
       for (i <- 0 until result.getNumIndiv) {
@@ -751,15 +754,15 @@ object EFEP_MOEA {
         if (!marcas(i)) {
           maxP += result.indivi(i)
         }
-      }
+      } */
 
       //************************************************************************
 
-      maxPop = new Population(maxP.length, Variables.getNVars, AG.getNumObjectives, Ejemplos.getNEx, AG.getRulesRep, Variables)
-      maxPop.indivi = maxP.toArray
+      //maxPop = new Population(maxP.length, Variables.getNVars, AG.getNumObjectives, Ejemplos.getNEx, AG.getRulesRep, Variables)
+      //maxPop.indivi = maxP.toArray
       //WriteRule(maxPop, AG.getNumObjectives, max_filter_rules, max_filter_measure, cab_measure_file)
       //AG.CalcPobOutput(max_filter_tra, chiPop, Ejemplos, Variables, classification_type, classNames)
-    }
+    //}
     //        float cnf_min = AG.getMinCnf();
     //        for (int cnf = 0; cnf <= 3; cnf++) {
     //            String cnfVal = String.valueOf(Math.round(cnf_min * 10));
@@ -768,19 +771,18 @@ object EFEP_MOEA {
     //        }
 
 
-    // Calculate the .tst and the quac file
-    CalculateTest(output_file_tst, qmeasure_file, result, classification_type, AG.getRulesRep)
-    CalculateTest(confidence_filter_tst, confidence_filter_qmeasre, confPop, classification_type, AG.getRulesRep)
-    if(chi)
+
+    //CalculateTest(confidence_filter_tst, confidence_filter_qmeasre, confPop, classification_type, AG.getRulesRep)
+    /*if(chi)
       CalculateTest(chi_filter_tst, chi_filter_qmeasure, chiPop, classification_type, AG.getRulesRep)
     if(max)
-      CalculateTest(max_filter_tst, max_filter_qmeasure, maxPop, classification_type, AG.getRulesRep)
+      CalculateTest(max_filter_tst, max_filter_qmeasure, maxPop, classification_type, AG.getRulesRep)*/
 
 
     val t_fin: Long = System.currentTimeMillis
     val cadtimeTotal: Double = time / 1000
-    System.out.println("####### Total time: " + d.format(cadtimeTotal) + "sec.")
-    File.AddtoFile(seg_file, "####### Total time: " + d.format(cadtimeTotal) + "sec.")
+    System.out.println("####### Total time: " + cadtimeTotal + "sec.")
+    File.AddtoFile(seg_file, "####### Total time: " + cadtimeTotal + "sec.")
   }
 
   /**
@@ -796,7 +798,7 @@ object EFEP_MOEA {
     * @throws IOException
     */
   @throws[IOException]
-  def CalculateTest(outputFile: String, measureFile:String,  pob: Population, classificationType: String, ruleRep: String) {
+  def CalculateTest(outputFile: String, measureFile:String,  pob: Population, classificationType: String, ruleRep: String, sc: SparkContext, AG: Genetic) {
     var pertenencia: Float = 0f
     val pert: Float = 0
     var chrome: CromCAN = null
@@ -808,10 +810,12 @@ object EFEP_MOEA {
     val fp: Float = 0
     var normsum: Array[Float] = null
     //CaptureDataset(input_file_tst, false); // Read test set and initialize its values
-    CaptureDatasetTest() // Read test set and initialize its values
+    //CaptureDatasetTest() // Read test set and initialize its values
+    readDataset(input_file_tst,sc,numPartitions,Variables.getNLabel)
+    println(Ejemplos.getNEx)
 
-    var contents: String = Data.getHeader
-    Files.writeFile(outputFile, contents)
+    //var contents: String = Data.getHeader
+    //Files.writeFile(outputFile, contents)
     val numRules = pob.getNumIndiv
 
     normsum = new Array[Float](Variables.getNClass)
@@ -828,6 +832,11 @@ object EFEP_MOEA {
 
     val cubiertosSoporte_Positiva = new BitSet(Ejemplos.getNEx)
     val cubiertosSoporte_Negativa = new BitSet(Ejemplos.getNEx)
+
+    // Evaluates the population against the test data
+    pob.evalPop(AG, sc.broadcast(Variables), Ejemplos, sc)
+
+    // Stores the quality measures in the file.
 
   /*
     Ejemplos.dat.foreach(example =>{
