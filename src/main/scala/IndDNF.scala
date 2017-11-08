@@ -35,6 +35,7 @@ def this(length: Int, neje: Int, nobj: Int, Variables: TableVar, clas: Int) {
   medidas = new QualityMeasures(nobj)
   evaluado = false
   cubre = new BitSet(neje)
+  cubre.clear(0,neje)
   overallConstraintViolation = 0.0
   numberOfViolatedConstraints = 0
   crowdingDistance = 0.0
@@ -421,7 +422,9 @@ def this(length: Int, neje: Int, nobj: Int, Variables: TableVar, clas: Int) {
     cromosoma.Print(nFile)
     var contents = "DistanceCrowding " + this.getCrowdingDistance + "\n"
     contents += "Evaluated - " + evaluado + "\n"
+    contents += "Class " + this.clas
     contents += "Evaluacion Generado " + n_eval + "\n\n"
+
     if (nFile eq "")
       print(contents)
     else
@@ -466,7 +469,7 @@ def this(length: Int, neje: Int, nobj: Int, Variables: TableVar, clas: Int) {
 
 
 
-  override def evalExample(Variables: Broadcast[TableVar], data: TypeDat, index: Long): ConfusionMatrix = {
+  override def evalExample(Variables: Broadcast[TableVar], data: TypeDat, index: Long, fin: Boolean): ConfusionMatrix = {
     val mat = new ConfusionMatrix(1)
     var disparoCrisp = 1
     for (i <- 0 until Variables.value.getNVars) {
@@ -494,7 +497,7 @@ def this(length: Int, neje: Int, nobj: Int, Variables: TableVar, clas: Int) {
     }
 
     if(disparoCrisp > 0){
-      cubre.set(index toInt)
+      mat.coveredExamples += index
       mat.ejAntCrisp += 1
       //mat.coveredExamples += index
       if(data.getClas == this.clas){

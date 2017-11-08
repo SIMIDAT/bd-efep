@@ -184,6 +184,8 @@ class TableDat extends Serializable {
     val aux = datosRDD.map(x => (x._1,x._2.getClas)).collect().sortBy(_._1)
       classes = aux.map(x => x._2)
 
+    println("Number of examples: " + nEjem)
+
   }
 
 

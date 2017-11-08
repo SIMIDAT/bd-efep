@@ -569,7 +569,11 @@ object EFEP_MOEA {
     val chiThreshols = 3.84
 
     // Initialise the Spark Context
-    val conf = new SparkConf().setMaster("local[*]").setAppName("MOEA_BigData").set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+     val conf = new SparkConf().setAppName("MOEA_BigData").set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+
+    // Only for debug
+    //val conf = new SparkConf().setMaster("local[*]").setAppName("MOEA_BigData").set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+
     val sc = new SparkContext(conf)
 
     sc.setLogLevel("ERROR")
@@ -591,6 +595,7 @@ object EFEP_MOEA {
 
     // Read the dataset, store values and echo to output and seg files
     //CaptureDataset(input_file_tra, true)
+    println("Reading the dataset...")
     readDataset(input_file_tra,sc,numPartitions,Variables.getNLabel)
 
     // Screen output of same parameters
@@ -614,7 +619,8 @@ object EFEP_MOEA {
       // Broadcast the Variables structure to all mappers and execute the genetic algorithm
       val broadcastVariables = sc.broadcast(Variables)
       result = AG.GeneticAlgorithm(broadcastVariables, Ejemplos, seg_file,sc)
-      println("GENERATION OF ELITE: " + result.ult_cambio_eval)
+      //println("GENERATION OF ELITE: " + result.ult_cambio_eval)
+      //println("NUM_Individuals: " + result.indivi.length)
 
       val marcar: BitSet =  if(AG.getRulesRep equalsIgnoreCase "can")
         AG.RemoveRepeatedCAN(result)
@@ -673,7 +679,8 @@ object EFEP_MOEA {
 
     contents = "Algorithm terminated\n" + "--------------------\n" + "####### Execution time: " + d.format(cadtime) + " sec.\n"
     // Calculate the .tst and the quac file
-    CalculateTest(output_file_tst, qmeasure_file, result, classification_type, AG.getRulesRep, sc)
+    println("Calculating test results...")
+    CalculateTest(output_file_tst, qmeasure_file, result, classification_type, AG.getRulesRep, sc, AG)
 
     /*println(contents)
     File.AddtoFile(seg_file, "\n\n" + contents)
@@ -812,7 +819,7 @@ object EFEP_MOEA {
     //CaptureDataset(input_file_tst, false); // Read test set and initialize its values
     //CaptureDatasetTest() // Read test set and initialize its values
     readDataset(input_file_tst,sc,numPartitions,Variables.getNLabel)
-    println(Ejemplos.getNEx)
+    //println("Ejemplos en test: " + Ejemplos.getNEx)
 
     //var contents: String = Data.getHeader
     //Files.writeFile(outputFile, contents)
@@ -834,9 +841,132 @@ object EFEP_MOEA {
     val cubiertosSoporte_Negativa = new BitSet(Ejemplos.getNEx)
 
     // Evaluates the population against the test data
+    pob.indivi.foreach(ind => ind.setIndivEvaluated(false))
     pob.evalPop(AG, sc.broadcast(Variables), Ejemplos, sc)
 
+
     // Stores the quality measures in the file.
+
+    // Write measures in the file
+    val sixDecimals: DecimalFormat = new DecimalFormat("0.000000")
+    var contents = ""
+    val threeInts: DecimalFormat = new DecimalFormat("000")
+
+    contents = "Number \tClass \tSize \tNVar \tLength \tUnusualness \tGain" + "\tSensitivity \tSupportP \tSupporN \tSupportDif \tFConfidence \tGrowthRate \tTEFisher \tHellinger \tTPr \tFPr \n"
+    Files.writeFile(measureFile, contents)
+    var AvNVAR: Float = 0
+    var AvLENG: Float = 0
+    var AvUNUS: Float = 0
+    var AvGAIN: Double = .0
+    var AvSENS: Float = 0
+    var AvDIFS: Float = 0
+    var AvFCNF: Double = .0
+    var AvTPr: Float = 0
+    var AvFPr: Float = 0
+    var AvDH: Float = 0
+    var AvTF: Float = 0
+    var AvSupm: Float = 0
+    var AvSupM: Float = 0
+    // Calculate quac file
+    var rule: Int = 0
+    var countGR: Int = 0
+    // number of rules with GR >= 1
+    //num_var_no_interv = num_var_no_interv.map(x => x / Ejemplos.getNEx)
+    //for(clase <- pob.) {
+    pob.indivi.foreach(ind => {
+
+      val measures: QualityMeasures = ind.medidas
+      contents = "" + threeInts.format(rule) + "   "
+      contents += "\t" + threeInts.format(ind.getClas)
+      contents += "\t-"
+      contents += "\t" + sixDecimals.format(ind.medidas.getNVars)
+      contents += "\t" + sixDecimals.format(measures.getLength)
+      contents += "\t" + sixDecimals.format(measures.getUnus)
+      if (measures.getGain == Double.PositiveInfinity) {
+        contents += "\tINFINITY"
+      } else {
+        contents += "\t" + sixDecimals.format(measures.getGain)
+      }
+      contents += "\t" + sixDecimals.format(measures.getSensitivity)
+      contents += "\t" + sixDecimals.format(measures.getSupm)
+      contents += "\t" + sixDecimals.format(measures.getSupM)
+      contents += "\t" + sixDecimals.format(measures.getSuppDiff)
+      contents += "\t" + sixDecimals.format(measures.getCnf)
+      if (measures.getGrowthRate == Float.PositiveInfinity) {
+        contents += "\tINFINITY"
+      }
+      else {
+        contents += "\t" + sixDecimals.format(measures.getGrowthRate)
+      }
+      if (measures.getGrowthRate >= 1) {
+        countGR += 1
+      }
+      contents += "\t" + sixDecimals.format(measures.getFisher)
+      contents += "\t" + sixDecimals.format(measures.getHellinger)
+      contents += "\t" + sixDecimals.format(measures.getTPr)
+      contents += "\t" + sixDecimals.format(measures.getFPr)
+      contents += "\n"
+      AvNVAR += ind.medidas.getNVars.toFloat
+      AvLENG += measures.getLength
+      AvDH += measures.getHellinger
+      AvDIFS += measures.getSuppDiff
+      AvFCNF += measures.getCnf
+      AvFPr += measures.getFPr
+      AvGAIN += measures.getGain
+      AvSENS += measures.getSensitivity
+      if (measures.getFisher <= alpha) {
+        AvTF += 1
+      }
+      AvTPr += measures.getTPr
+      AvUNUS += measures.getUnus
+      AvSupM += measures.getSupM
+      AvSupm += measures.getSupm
+      // Add values os quality measures to the file
+      Files.addToFile(measureFile, contents)
+      rule += 1
+      //}
+    })
+
+    //Calcular soporte con Examples
+
+    // Para calcular los ejemplos que han sido cubiertos,
+
+    contents = "---\t"
+    contents += "---"
+    contents += "\t" + rule  // NRULES
+    contents += "\t" + sixDecimals.format(AvNVAR / rule) // Nvars
+    contents += "\t" + sixDecimals.format(AvLENG / rule) // Length
+    contents += "\t" + sixDecimals.format(AvUNUS / rule) // Unus
+    if (AvGAIN == Float.PositiveInfinity)  // Gain
+      contents += "\tINFINITY"
+    else
+      contents += "\t" + sixDecimals.format(AvGAIN / rule)
+
+    contents += "\t" + sixDecimals.format(AvSENS / rule) // Sensitivity
+
+    if(imbalanced){ // SupportP
+      // If imbalanced, it is calculated the global TPR
+      contents += "\t" + sixDecimals.format(cubiertosSoporte_Positiva.cardinality().toFloat / Ejemplos.getExamplesClass(pob.indivi(0).getClas).toFloat)
+    } else {
+      // If not, it is calculated the global SUPPORT of the set of rules with respect the positve class of each rule
+      contents += "\t---" //+ sixDecimals.format(cubiertosSoporte_Positiva.cardinality().toFloat / cubiertosSoporte_Positiva.length().toFloat)
+    }
+
+    contents += "\t---" //+ sixDecimals.format(cubiertosSoporte_Negativa.cardinality().toFloat / cubiertosSoporte_Negativa.length().toFloat) // SupportN
+    contents += "\t" + sixDecimals.format(AvDIFS / rule) // SuppDiff
+    contents += "\t" + sixDecimals.format(AvFCNF / rule) // Conf
+    contents += "\t" + sixDecimals.format(countGR.toFloat / rule.toFloat) // GR
+    contents += "\t" + sixDecimals.format(AvTF / rule.toFloat) //Fisher
+    contents += "\t" + sixDecimals.format(AvDH / rule) // Hellinger
+    contents += "\t" + sixDecimals.format(AvTPr / rule) // TPR
+    contents += "\t" + sixDecimals.format(AvFPr / rule) // FPR
+    contents += "\n"
+
+    // Add average values to the quac file
+    Files.addToFile(measureFile, contents)
+
+
+
 
   /*
     Ejemplos.dat.foreach(example =>{

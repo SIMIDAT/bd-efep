@@ -250,7 +250,7 @@ trait Individual extends Serializable{
 
   def length(Variables: TableVar): Int
 
-  def evalExample(Variables: Broadcast[TableVar], data: TypeDat, index: Long): ConfusionMatrix
+  def evalExample(Variables: Broadcast[TableVar], data: TypeDat, index: Long, fin: Boolean): ConfusionMatrix
 
   /**
     * It calculates the quality measures of the individual and store the objective measures.
@@ -261,6 +261,7 @@ trait Individual extends Serializable{
     */
   def computeQualityMeasures(mat: ConfusionMatrix, AG: Genetic, Examples: TableDat, Variables: TableVar): Unit = {
     mat.numVarNoInterv /= Examples.getNEx
+    medidas.setNVars(Variables.getNVars - mat.numVarNoInterv)
     //ejCompAntNoClassCrisp = ejCompAntCrisp - ejCompAntClassCrisp // Examples
     // Compute Quality Measures:
     // TPr
@@ -424,7 +425,7 @@ trait Individual extends Serializable{
       }
 
       if (AG.getNObjectives(i).compareToIgnoreCase("MEDGEO") == 0) {
-        val medgeo: Float = if (mat. numVarNoInterv >= Variables.getNVars) {
+        val medgeo: Float = if (mat.numVarNoInterv >= Variables.getNVars) {
           0
         } else {
 

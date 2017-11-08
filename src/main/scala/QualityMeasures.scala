@@ -21,7 +21,7 @@ class QualityMeasures(var num_objetivos: Int) extends Serializable {
     */
   private var v_objetivos = Array.fill[Double](num_objetivos)(0)
   private var cnf: Double = .0
-
+  private var nvars: Double =   .0
   private var length: Float = 0
   private var sensitivity: Float = 0
   private var unus: Float = 0
@@ -41,6 +41,11 @@ class QualityMeasures(var num_objetivos: Int) extends Serializable {
   private var coverage: Float = 0
   private var strength: Float = 0
   var confusionMatrix: ConfusionMatrix = new ConfusionMatrix(1)
+
+  def getNVars: Double = nvars
+  def setNVars(v: Double) = {
+    nvars = v
+  }
 
   def getStrength: Float = strength
   def setStrength(v: Float) ={

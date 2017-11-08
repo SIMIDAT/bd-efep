@@ -126,7 +126,7 @@ class Population extends Serializable {
         val data = d._2
         val index = d._1
         for (i <- inds.value.indices){
-          matrices(i) = matrices(i) + inds.value(i).evalExample(Variables, data, index)
+          matrices(i) = matrices(i) + inds.value(i).evalExample(Variables, data, index, false)
         }
       }
 

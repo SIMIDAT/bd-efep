@@ -22,4 +22,4 @@ One per Class: yes
 Number of objetives: 2
 	Objetive 0: TPR
 	Objetive 1: MINIMIZE_FPR
-####### Total time: 45.514sec.
+####### Total time: 56.302sec.
