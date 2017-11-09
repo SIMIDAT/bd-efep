@@ -115,20 +115,72 @@ class Population extends Serializable {
 
     // AQUI HAY QUE METER MAS ADELANTE BIG DATA
     val indivsToEval = indivi.filter(y => !y.getIndivEvaluated)
-    val inds = sc.broadcast(indivsToEval)
+    //val inds = sc.broadcast(indivsToEval)
 
     val confusionMatrices = Examples.datosRDD.mapPartitions(x => {
-      var matrices: Array[ConfusionMatrix] = new Array[ConfusionMatrix](inds.value.length)
+      var matrices: Array[ConfusionMatrix] = new Array[ConfusionMatrix](indivsToEval.length)
       matrices = matrices.map(x => new ConfusionMatrix(neje))
 
       while(x.hasNext){
         val d = x.next()
         val data = d._2
         val index = d._1
-        for (i <- inds.value.indices){
-          matrices(i) = matrices(i) + inds.value(i).evalExample(Variables, data, index, false)
+        for (k <- indivsToEval.indices){
+          //matrices(i) = matrices(i) + inds.value(i).evalExample(Variables, data, index, false
+          val individual = indivsToEval(i)
+          val cromosoma = individual.getIndivCromDNF
+            var disparoCrisp = 1
+            for (i <- 0 until Variables.value.getNVars) {
+              if (!Variables.value.getContinuous(i)) {
+                // Discrete variables
+                if (cromosoma.getCromGeneElem(i, Variables.value.getNLabelVar(i))) {
+                  if (!cromosoma.getCromGeneElem(i, data.getDat(i).toInt) && !data.getLost(Variables, 0, i)) {
+                    disparoCrisp = 0
+                  }
+                } else {
+                  matrices(k).numVarNoInterv += 1
+                }
+              } else {
+                // Continuous variable
+                if (cromosoma.getCromGeneElem(i, Variables.value.getNLabelVar(i))) {
+                  if(!data.getLost(Variables,0,i)){
+                    if(!cromosoma.getCromGeneElem(i, individual.NumInterv(data.getDat(i),i,Variables))){
+                      disparoCrisp = 0
+                    }
+                  }
+                } else {
+                  matrices(k).numVarNoInterv += 1
+                }
+              }
+            }
+
+            if(disparoCrisp > 0){
+              matrices(k).coveredExamples += index
+              matrices(k).ejAntCrisp += 1
+              //mat.coveredExamples += index
+              if(data.getClas == individual.getClas){
+                matrices(k).ejAntClassCrisp += 1
+                matrices(k).tp += 1
+              } else {
+                matrices(k).ejAntNoClassCrisp += 1
+                matrices(k).fp += 1
+              }
+              // cubreClase[Examples.getClass(i)]++; // Como hago yo esto?
+              // AQUI TENEMOS UN PROBLEMA CON LOS NUEVOS EJEMPLOS CUBIERTOS
+
+              /*if((!cubiertos.get(index toInt)) && (data.getClas == this.clas)){
+                mat.ejAntClassNewCrisp += 1
+              }*/
+            } else {
+              if(data.getClas == individual.getClas){
+                matrices(k).fn += 1
+              } else {
+                matrices(k).tn += 1
+              }
+            }
+          }
         }
-      }
+
 
       val aux = new Array[Array[ConfusionMatrix]](1)
       aux(0) = matrices

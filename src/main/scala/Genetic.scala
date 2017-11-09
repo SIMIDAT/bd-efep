@@ -1750,7 +1750,6 @@ class Genetic extends Serializable {
     val auxPob = poblac.map(x => x.indivi.filter(ind => !ind.getIndivEvaluated))
     val neje = Examples.getNEx
     val ninds = auxPob.map(p => p.length).sum
-    val auxi = sc.broadcast(auxPob)
     val confusionMatrices = Examples.datosRDD.mapPartitions(x => {
       var matrices: Array[ConfusionMatrix] = new Array[ConfusionMatrix](ninds)
       matrices = matrices.map(x => new ConfusionMatrix(neje))
@@ -1760,9 +1759,56 @@ class Genetic extends Serializable {
         val data = d._2
         val index = d._1
         var count = 0
-        for (i <- auxi.value.indices) {
-          for (j <- auxi.value(i).indices) {
-            matrices(count) = matrices(count) + auxi.value(i)(j).evalExample(Variables, data, index, fin)
+        for (i <- auxPob.indices) {
+          for (j <- auxPob(i).indices) {
+            //matrices(count) = matrices(count) + auxPob(i)(j).evalExample(Variables, data, index, fin)
+            //count += 1
+
+            val individual = auxPob(i)(j)
+            val cromosoma = individual.getIndivCromDNF
+            var disparoCrisp = 1
+            for (k <- 0 until Variables.value.getNVars) {
+              if (!Variables.value.getContinuous(k)) {
+                // Discrete variables
+                if (cromosoma.getCromGeneElem(k, Variables.value.getNLabelVar(k))) {
+                  if (!cromosoma.getCromGeneElem(k, data.getDat(k).toInt) && !data.getLost(Variables, 0, k)) {
+                    disparoCrisp = 0
+                  }
+                } else {
+                  matrices(count).numVarNoInterv += 1
+                }
+              } else {
+                // Continuous variable
+                if (cromosoma.getCromGeneElem(k, Variables.value.getNLabelVar(k))) {
+                  if (!data.getLost(Variables, 0, k)) {
+                    if (!cromosoma.getCromGeneElem(k, individual.NumInterv(data.getDat(k), k, Variables))) {
+                      disparoCrisp = 0
+                    }
+                  }
+                } else {
+                  matrices(count).numVarNoInterv += 1
+                }
+              }
+            }
+
+            if (disparoCrisp > 0) {
+              matrices(count).coveredExamples += index
+              matrices(count).ejAntCrisp += 1
+              //mat.coveredExamples += index
+              if (data.getClas == individual.getClas) {
+                matrices(count).ejAntClassCrisp += 1
+                matrices(count).tp += 1
+              } else {
+                matrices(count).ejAntNoClassCrisp += 1
+                matrices(count).fp += 1
+              }
+            } else {
+              if (data.getClas == individual.getClas) {
+                matrices(count).fn += 1
+              } else {
+                matrices(count).tn += 1
+              }
+            }
             count += 1
           }
         }
