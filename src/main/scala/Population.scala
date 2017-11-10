@@ -127,7 +127,7 @@ class Population extends Serializable {
         val index = d._1
         for (k <- indivsToEval.indices){
           //matrices(i) = matrices(i) + inds.value(i).evalExample(Variables, data, index, false
-          val individual = indivsToEval(i)
+          val individual = indivsToEval(k)
           val cromosoma = individual.getIndivCromDNF
             var disparoCrisp = 1
             for (i <- 0 until Variables.value.getNVars) {

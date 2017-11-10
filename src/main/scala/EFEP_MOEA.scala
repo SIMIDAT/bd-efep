@@ -845,6 +845,7 @@ object EFEP_MOEA {
 
     // Evaluates the population against the test data
     pob.indivi.foreach(ind => ind.setIndivEvaluated(false))
+
     pob.evalPop(AG, sc.broadcast(Variables), Ejemplos, sc)
 
 
