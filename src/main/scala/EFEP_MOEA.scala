@@ -368,9 +368,9 @@ object EFEP_MOEA {
     * @param nobj             Number of objectives
     * @param fileRule         File of rules
     * @param fileQuality      File of quality measures
-    * @param cab_measure_file File of header measure
+    *
     */
-  def WriteRule(pob: Population, nobj: Int, fileRule: String, fileQuality: String, cab_measure_file: String /*, Vector vmarca*/) {
+  def WriteRule(pob: Population, nobj: Int, fileRule: String, fileQuality: String /*cab_measure_file: String*/ /*, Vector vmarca*/) {
     var NumRules = 0
     val marca = 0
     val aux1_ini = fileRule.substring(0, fileRule.lastIndexOf("."))
@@ -385,7 +385,7 @@ object EFEP_MOEA {
       //                cnf_min += 0.10;
       //            }
       File.writeFile(aux1_ini + "." + aux1_fin, "")
-      File.writeFile(aux2_ini + "." + aux2_fin, cab_measure_file)
+      //File.writeFile(aux2_ini + "." + aux2_fin, cab_measure_file)
 
     val cnf_min = AG.getMinCnf
     //for (int cnf = 0; cnf <= 3; cnf++) {
@@ -411,14 +411,16 @@ object EFEP_MOEA {
             if (!Variables.getContinuous(auxi)) {
               // Discrete variable
               if (regla.getCromElem(auxi) < Variables.getNLabelVar(auxi)) {
-                contents += "\t\tVariable " + Attributes.getInputAttribute(auxi).getName + " = "
-                contents += Attributes.getInputAttribute(auxi).getNominalValue(regla.getCromElem(auxi)) + "\n"
+
+                contents += "\t\tVariable " + Variables.getNameVar(auxi) + " = "
+                contents += Variables.getNameLabel(auxi,regla.getCromElem(auxi))+ "\n"
+
               }
             }
             else {
               // Continuous variable
               if (regla.getCromElem(auxi) < Variables.getNLabelVar(auxi)) {
-                contents += "\t\tVariable " + Attributes.getInputAttribute(auxi).getName + " = "
+                contents += "\t\tVariable " + Variables.getNameVar(auxi) + " = "
                 contents += "Label " + regla.getCromElem(auxi)
                 contents += " \t (" + Variables.getX0(auxi, regla.getCromElem(auxi).toInt)
                 contents += " " + Variables.getX1(auxi, regla.getCromElem(auxi).toInt)
@@ -434,16 +436,16 @@ object EFEP_MOEA {
             if (regla.getCromGeneElem(i, Variables.getNLabelVar(i))) {
               if (!Variables.getContinuous(i)) {
                 // Discrete variable
-                contents += "\tVariable " + Attributes.getInputAttribute(i).getName + " = "
+                contents += "\tVariable " + Variables.getNameVar(i) + " = "
                 for (j <- 0 until Variables.getNLabelVar(i)) {
                   if (regla.getCromGeneElem(i, j)) {
-                    contents += Attributes.getInputAttribute(i).getNominalValue(j) + " "
+                    contents += Variables.getNameLabel(i,j) + " "
                   }
                 }
                 contents += "\n"
               } else {
                 // Continuous variable
-                contents += "\tVariable " + Attributes.getInputAttribute(i).getName + " = "
+                contents += "\tVariable " + Variables.getNameVar(i) + " = "
                 for (j <- 0 until Variables.getNLabelVar(i)) {
                   if (regla.getCromGeneElem(i, j)) {
                     contents += "Label " + j
@@ -458,11 +460,11 @@ object EFEP_MOEA {
           }
         }
 
-        contents += "\tConsecuent: " + Attributes.getOutputAttribute(0).getNominalValue(pob.getIndiv(aux).getClas) + "\n\n"
+        contents += "\tConsecuent: " + Variables.classNames(pob.indivi(aux).getClas) + "\n\n"
         // File.AddtoFile(aux1_ini + "_0" + cnfVal + "." + aux1_fin, contents);
         File.AddtoFile(aux1_ini + "." + aux1_fin, contents)
         val sixDecimals = new DecimalFormat("0.000000")
-        contents = "" + Variables.getNumClassObj
+        //contents = "" + Variables.getNumClassObj
         for (auxi <- 0 until AG.getNumObjectives) {
           val value = Result.getObjectiveValue(auxi)
           if (value == Double.PositiveInfinity) // if growth rate is an objective
@@ -569,10 +571,10 @@ object EFEP_MOEA {
     val chiThreshols = 3.84
 
     // Initialise the Spark Context
-     val conf = new SparkConf().setAppName("MOEA_BigData").set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+    //val conf = new SparkConf().setAppName("MOEA_BigData").set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
 
     // Only for debug
-    //val conf = new SparkConf().setMaster("local[*]").setAppName("MOEA_BigData").set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+    val conf = new SparkConf().setMaster("local[*]").setAppName("MOEA_BigData").set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
 
     val sc = new SparkContext(conf)
 
@@ -622,6 +624,7 @@ object EFEP_MOEA {
       //println("GENERATION OF ELITE: " + result.ult_cambio_eval)
       //println("NUM_Individuals: " + result.indivi.length)
 
+      result.indivi.foreach(x => x.Print(""))
       val marcar: BitSet =  if(AG.getRulesRep equalsIgnoreCase "can")
         AG.RemoveRepeatedCAN(result)
         else
@@ -648,7 +651,7 @@ object EFEP_MOEA {
     // Filter rules if neccesary and write rules to file
     //if (confidence_filter)
     // allRules = FilterPopulation(allRules, AG.getMinCnf)
-    //WriteRule(result, AG.getNumObjectives, NameRule, NameMeasure,  cab_measure_file)
+    WriteRule(result, AG.getNumObjectives, NameRule, NameMeasure)
 
     // Save the .tra file
     //AG.CalcPobOutput(output_file_tra, result, Ejemplos, Variables, classification_type, classNames, Data.getHeader)
