@@ -1093,7 +1093,7 @@ class Genetic extends Serializable {
     */
   private def ReInitCoverage(poblac: Population, Variables: TableVar, Examples: TableDat, nFile: String): Population = {
 
-    poblac.examplesCoverPopulation(Examples.getNEx, Trials)
+    //poblac.examplesCoverPopulation(Examples.getNEx, Trials)
 
     // Checks the difference between the last and actual evaluations
     val porc_cambio = n_eval / 10
@@ -1902,7 +1902,10 @@ class Genetic extends Serializable {
 
     // Now we have   the complete confusion matrices of all individuals. Calculate their measures!!
     for (i <- auxPob.indices) {
-      //indivsToEval(i).Print("")
+      //Check if the population evolves
+      poblac(i).examplesCoverPopulation(Examples.getNEx,getTrials,pobCovered(i).value)
+
+      // Update ej_cubiertos estructure
       poblac(i).ej_cubiertos.clear(0,Examples.getNEx)
       poblac(i).ej_cubiertos.or(pobCovered(i).value)
 

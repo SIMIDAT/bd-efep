@@ -429,6 +429,42 @@ class Population extends Serializable {
 
   }
 
+
+
+
+  /**
+  * <p>
+  * This function marks the examples covered by the actual population.
+  * </p>
+  *
+  * @param neje   Number of examples
+  * @param trials Number of trials performed
+    */
+  def examplesCoverPopulation(neje: Int, trials: Int, pobCovered: BitSet) {
+    //Copies the actual examples structure
+    val cubiertos_antes = new util.BitSet(neje)
+    cubiertos_antes.clear(0,neje)
+    cubiertos_antes.or(ej_cubiertos)
+
+    //Comparisons both structures
+    val aux = new BitSet(ej_cubiertos.size())
+    aux.clear(0, ej_cubiertos.size())
+    aux.or(cubiertos_antes) // aux es ahora una copia de cubiertos_antes
+    // Para comprobar que ha habido cambios, la operacion es:
+    // (cubiertos_antes xor ej_cubiertos) and (not cubiertos_antes)
+    aux.xor(pobCovered) // Con el xor se obtienen aquellos que son diferentes.
+    cubiertos_antes.flip(0, neje) // negado de cubiertos_antes
+    aux.and(cubiertos_antes)
+
+    // Si ha habido cambios, la cardinalidad de aux debe ser mayor que cero
+    if(aux.cardinality() > 0){
+      // There is a change
+      ult_cambio_eval = trials
+    }
+
+  }
+
+
   /**
     * <p>
     * Prints population individuals

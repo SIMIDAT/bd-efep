@@ -1,8 +1,8 @@
 algorithm = NMEEFSD
-inputData = "census-5-1tra.dat" "census-5-1tra.dat" "census-5-1tst.dat"
-outputData = "census-5-1-128.tra" "census-5-1-128.tst" "census-5-1-128_reg.txt" "census-5-1-128tra_quac.txt" "census-5-1-128_seg.txt" "census-5-1-128tst_quac.txt"
+inputData = "adult-5-1tra.dat" "adult-5-1tra.dat" "adult-5-1tst.dat"
+outputData = "adult-5-1-128.tra" "adult-5-1-128.tst" "adult-5-1-128_reg.txt" "adult-5-1-128tra_quac.txt" "adult-5-1-128_seg.txt" "adult-5-1-128tst_quac.txt"
 seed = 1
-RulesRep = dnf
+RulesRep = can
 nLabels = 3
 nEval = 10000
 popLength = 51
