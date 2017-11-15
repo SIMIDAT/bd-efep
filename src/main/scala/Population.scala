@@ -46,6 +46,9 @@ class Population extends Serializable {
     num_indiv = numind
     num_used = 0
 
+    if(RulRep equalsIgnoreCase "CAN")
+      indivi = Array.fill[Individual](numind)(new IndCAN(numgen, neje, nobj, 0))
+    else
       indivi = Array.fill[Individual](numind)(new IndDNF(numgen, neje, nobj, Variables,0))
 
     ej_cubiertos = new BitSet(neje)
@@ -128,13 +131,17 @@ class Population extends Serializable {
         for (k <- indivsToEval.indices){
           //matrices(i) = matrices(i) + inds.value(i).evalExample(Variables, data, index, false
           val individual = indivsToEval(k)
-          val cromosoma = individual.getIndivCromDNF
-            var disparoCrisp = 1
-            for (i <- 0 until Variables.value.getNVars) {
-              if (!Variables.value.getContinuous(i)) {
-                // Discrete variables
-                if (cromosoma.getCromGeneElem(i, Variables.value.getNLabelVar(i))) {
-                  if (!cromosoma.getCromGeneElem(i, data.getDat(i).toInt) && !data.getLost(Variables, 0, i)) {
+          var disparoCrisp = 1
+
+          if(AG.getRulesRep equalsIgnoreCase "CAN"){
+            val cromosoma = individual.getIndivCromCAN
+
+            for(j <- 0 until Variables.value.getNVars){
+              if(! Variables.value.getContinuous(j)){
+                // Discrete variable
+                if(cromosoma.getCromElem(j) <= Variables.value.getMax(j)){
+                  // Variable k participate in the rule
+                  if((data.getDat(j) != cromosoma.getCromElem(j)) && ! data.getLost(Variables,0,j)){
                     disparoCrisp = 0
                   }
                 } else {
@@ -142,9 +149,11 @@ class Population extends Serializable {
                 }
               } else {
                 // Continuous variable
-                if (cromosoma.getCromGeneElem(i, Variables.value.getNLabelVar(i))) {
-                  if(!data.getLost(Variables,0,i)){
-                    if(!cromosoma.getCromGeneElem(i, individual.NumInterv(data.getDat(i),i,Variables))){
+                if(cromosoma.getCromElem(j) < Variables.value.getNLabelVar(j)){
+                  // Variable k take part in the rule
+                  // Crisp computation
+                  if(! data.getLost(Variables, 0, j)){
+                    if(individual.NumInterv(data.getDat(j),j,Variables) != cromosoma.getCromElem(j)){
                       disparoCrisp = 0
                     }
                   }
@@ -153,9 +162,38 @@ class Population extends Serializable {
                 }
               }
             }
+          } else {
+            // DNF RULES
+            val cromosoma = individual.getIndivCromDNF
+
+            for (j <- 0 until Variables.value.getNVars) {
+              if (!Variables.value.getContinuous(j)) {
+                // Discrete variables
+                if (cromosoma.getCromGeneElem(j, Variables.value.getNLabelVar(j))) {
+                  if (!cromosoma.getCromGeneElem(j, data.getDat(j).toInt) && !data.getLost(Variables, 0, j)) {
+                    disparoCrisp = 0
+                  }
+                } else {
+                  matrices(k).numVarNoInterv += 1
+                }
+              } else {
+                // Continuous variable
+                if (cromosoma.getCromGeneElem(j, Variables.value.getNLabelVar(j))) {
+                  if (!data.getLost(Variables, 0, j)) {
+                    if (!cromosoma.getCromGeneElem(j, individual.NumInterv(data.getDat(j), j, Variables))) {
+                      disparoCrisp = 0
+                    }
+                  }
+                } else {
+                  matrices(k).numVarNoInterv += 1
+                }
+              }
+            }
+          }
 
             if(disparoCrisp > 0){
               matrices(k).coveredExamples += index
+              //matrices(k).coveredExamples.set(index.toInt)
               matrices(k).ejAntCrisp += 1
               //mat.coveredExamples += index
               if(data.getClas == individual.getClas){

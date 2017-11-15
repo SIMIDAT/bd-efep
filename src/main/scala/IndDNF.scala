@@ -497,7 +497,8 @@ def this(length: Int, neje: Int, nobj: Int, Variables: TableVar, clas: Int) {
     }
 
     if(disparoCrisp > 0){
-      mat.coveredExamples += index
+     mat.coveredExamples += index
+      // mat.coveredExamples.set(index.toInt)
       mat.ejAntCrisp += 1
       //mat.coveredExamples += index
       if(data.getClas == this.clas){

@@ -78,7 +78,7 @@ class ConfusionMatrix(neje: Int) extends Serializable{
     a.gradoCompAntClassFuzzy=this.gradoCompAntClassFuzzy + that.gradoCompAntClassFuzzy
     a.gradoCompAntFuzzy=this.gradoCompAntFuzzy + that.gradoCompAntFuzzy
     a.coveredExamples=this.coveredExamples ++ that.coveredExamples
-
+    //a.coveredExamples.or(that.coveredExamples)
     a
   }
 }

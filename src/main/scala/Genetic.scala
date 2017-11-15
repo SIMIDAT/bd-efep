@@ -18,6 +18,7 @@ import java.util._
 import org.apache.spark.SparkContext
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.sql.execution.datasources.parquet.ParquetOptions
+import org.apache.spark.util.SizeEstimator
 
 class Genetic extends Serializable {
   /**
@@ -740,7 +741,6 @@ class Genetic extends Serializable {
     val porcVar = 0.25.toFloat
     val porcPob = 0.75.toFloat
     best = new Array[Population](Variables.value.getNClass)
-
     //indivPerClass = long_poblacion / Variables.getNClass // Individuals per class exactly
     val modulus: Int = long_poblacion % Variables.value.getNClass // If the division is not exact, some classes must have an extra in
 
@@ -793,10 +793,10 @@ class Genetic extends Serializable {
           var dad = 0
           var mum = 0
           if (poblac(clas).getNumIndiv != 2) {
-            val dad = Randomize.RandintClosed(0, poblac(clas).getNumIndiv - 1) //Select(clas)
-            var mum = Randomize.RandintClosed(0, poblac(clas).getNumIndiv - 1) //Select(clas)
+            val dad = Select(clas)
+            var mum = Select(clas)
             while ((dad == mum) && (poblac(clas).getNumIndiv > 1))
-              mum = Randomize.RandintClosed(0, poblac(clas).getNumIndiv - 1) //Select(clas)
+              mum = Select(clas)
           } else {
             mum = 1
           }
@@ -809,7 +809,7 @@ class Genetic extends Serializable {
         }
 
         if (poblac(clas).getNumIndiv % 2 == 1) {
-          val dad = Randomize.RandintClosed(0, poblac(clas).getNumIndiv - 1) //Select(clas)
+          val dad = Select(clas)
           offspring(clas).CopyIndiv(poblac(clas).getNumIndiv - 1, Examples.getNEx, num_objetivos, poblac(clas).getIndiv(dad))
         }
       }
@@ -1750,10 +1750,13 @@ class Genetic extends Serializable {
     val auxPob = poblac.map(x => x.indivi.filter(ind => !ind.getIndivEvaluated))
     val neje = Examples.getNEx
     val ninds = auxPob.map(p => p.length).sum
+
+    val pobCovered = Array.fill[PobBitSet](Variables.value.getNClass)(new PobBitSet(Examples.getNEx))
+    pobCovered.foreach(x => sc.register(x))
+
     val confusionMatrices = Examples.datosRDD.mapPartitions(x => {
       var matrices: Array[ConfusionMatrix] = new Array[ConfusionMatrix](ninds)
       matrices = matrices.map(x => new ConfusionMatrix(neje))
-
       while (x.hasNext) {
         val d = x.next()
         val data = d._2
@@ -1765,34 +1768,72 @@ class Genetic extends Serializable {
             //count += 1
 
             val individual = auxPob(i)(j)
-            val cromosoma = individual.getIndivCromDNF
             var disparoCrisp = 1
-            for (k <- 0 until Variables.value.getNVars) {
-              if (!Variables.value.getContinuous(k)) {
-                // Discrete variables
-                if (cromosoma.getCromGeneElem(k, Variables.value.getNLabelVar(k))) {
-                  if (!cromosoma.getCromGeneElem(k, data.getDat(k).toInt) && !data.getLost(Variables, 0, k)) {
-                    disparoCrisp = 0
-                  }
-                } else {
-                  matrices(count).numVarNoInterv += 1
-                }
-              } else {
-                // Continuous variable
-                if (cromosoma.getCromGeneElem(k, Variables.value.getNLabelVar(k))) {
-                  if (!data.getLost(Variables, 0, k)) {
-                    if (!cromosoma.getCromGeneElem(k, individual.NumInterv(data.getDat(k), k, Variables))) {
+
+            if(RulesRep equalsIgnoreCase "CAN"){
+              val cromosoma = individual.getIndivCromCAN
+
+              for(k <- 0 until Variables.value.getNVars){
+                if(! Variables.value.getContinuous(k)){
+                  // Discrete variable
+                  if(cromosoma.getCromElem(k) <= Variables.value.getMax(k)){
+                    // Variable k participate in the rule
+                    if((data.getDat(k) != cromosoma.getCromElem(k)) && ! data.getLost(Variables,0,k)){
                       disparoCrisp = 0
                     }
+                  } else {
+                    matrices(count).numVarNoInterv += 1
                   }
                 } else {
-                  matrices(count).numVarNoInterv += 1
+                  // Continuous variable
+                  if(cromosoma.getCromElem(k) < Variables.value.getNLabelVar(k)){
+                    // Variable k take part in the rule
+                    // Crisp computation
+                    if(! data.getLost(Variables, 0, k)){
+                      if(individual.NumInterv(data.getDat(k),k,Variables) != cromosoma.getCromElem(k)){
+                        disparoCrisp = 0
+                      }
+                    }
+                  } else {
+                    matrices(count).numVarNoInterv += 1
+                  }
+                }
+              }
+            } else {
+              // DNF RULES
+              val cromosoma = individual.getIndivCromDNF
+
+              for (k <- 0 until Variables.value.getNVars) {
+                if (!Variables.value.getContinuous(k)) {
+                  // Discrete variables
+                  if (cromosoma.getCromGeneElem(k, Variables.value.getNLabelVar(k))) {
+                    if (!cromosoma.getCromGeneElem(k, data.getDat(k).toInt) && !data.getLost(Variables, 0, k)) {
+                      disparoCrisp = 0
+                    }
+                  } else {
+                    matrices(count).numVarNoInterv += 1
+                  }
+                } else {
+                  // Continuous variable
+                  if (cromosoma.getCromGeneElem(k, Variables.value.getNLabelVar(k))) {
+                    if (!data.getLost(Variables, 0, k)) {
+                      if (!cromosoma.getCromGeneElem(k, individual.NumInterv(data.getDat(k), k, Variables))) {
+                        disparoCrisp = 0
+                      }
+                    }
+                  } else {
+                    matrices(count).numVarNoInterv += 1
+                  }
                 }
               }
             }
 
+
+
             if (disparoCrisp > 0) {
-              matrices(count).coveredExamples += index
+              pobCovered(individual.getClas).add(index.toInt)
+              //matrices(count).coveredExamples += index
+              //matrices(count).coveredExamples.set(index.toInt)
               matrices(count).ejAntCrisp += 1
               //mat.coveredExamples += index
               if (data.getClas == individual.getClas) {
@@ -1819,21 +1860,24 @@ class Genetic extends Serializable {
       aux.iterator
     }, true).reduce((x, y) => {
       val ret = new Array[ConfusionMatrix](y.length)
+      //println("Size of coveredExamples of 'x': " + SizeEstimator.estimate(x) / (1024.0*1024.0) + " MB.    Length: " + x.length)
+      //println("Size of coveredExamples of 'y': " + SizeEstimator.estimate(y) / (1024.0*1024.0) + " MB.    Length: " + y.length)
+
       //trials += y.length
       var count = 0
-      for (i <- auxPob.indices){
+      /*for (i <- auxPob.indices){
         for(j <- auxPob(i).indices){
-          x(count).coveredExamples.foreach(value => auxPob(i)(j).cubre.set(value toInt))
-          y(count).coveredExamples.foreach(value => auxPob(i)(j).cubre.set(value toInt))
+          //x(count).coveredExamples.foreach(value => auxPob(i)(j).cubre.set(value toInt))
+          //y(count).coveredExamples.foreach(value => auxPob(i)(j).cubre.set(value toInt))
+          //auxPob(i)(j).cubre.or(x(count).coveredExamples)
+          //auxPob(i)(j).cubre.or(y(count).coveredExamples)
+
           count += 1
         }
-      }
+      }*/
 
       for (i <- y.indices) {
         val toRet: ConfusionMatrix = new ConfusionMatrix(neje)
-        //x(i).coveredExamples.foreach(value => auxPob(i).cubre.set(value toInt))
-        //y(i).coveredExamples.foreach(value => auxPob(i).cubre.set(value toInt))
-
 
         toRet.ejAntClassCrisp = x(i).ejAntClassCrisp + y(i).ejAntClassCrisp
         toRet.ejAntClassNewCrisp = x(i).ejAntClassNewCrisp + y(i).ejAntClassNewCrisp
@@ -1852,9 +1896,16 @@ class Genetic extends Serializable {
 
 
     var count = 0
+
+    //println(pobCovered.value.cardinality())
+    //println(pobCovered.value.length())
+
     // Now we have   the complete confusion matrices of all individuals. Calculate their measures!!
     for (i <- auxPob.indices) {
       //indivsToEval(i).Print("")
+      poblac(i).ej_cubiertos.clear(0,Examples.getNEx)
+      poblac(i).ej_cubiertos.or(pobCovered(i).value)
+
       for (j <- auxPob(i).indices) {
         //println("Cardinalidad: " +  auxPob(i)(j).cubre.cardinality())
         auxPob(i)(j).computeQualityMeasures(confusionMatrices(count), this, Examples, Variables.value)

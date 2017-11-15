@@ -374,10 +374,15 @@ trait Individual extends Serializable{
       Math.pow(tpr, 2).toFloat / (tpr + fpr)
     }
 
-
+    // Jaccard index
+    val jac = mat.tp / (mat.tp + mat.fp + mat.fn)
+    medidas.setJaccard(jac)
 
     // Sets the objective measures
     for (i <- 0 until AG.getNumObjectives) {
+      if(AG.getNObjectives(i).compareToIgnoreCase("JACCARD") == 0){
+        medidas.setObjectiveValue(i,jac)
+      }
       if (AG.getNObjectives(i).compareToIgnoreCase("AUC") == 0)
         medidas.setObjectiveValue(i, success)
       if (AG.getNObjectives(i).compareToIgnoreCase("COMP") == 0 || AG.getNObjectives(i).compareToIgnoreCase("SENS") == 0 || AG.getNObjectives(i).compareToIgnoreCase("TPR") == 0)

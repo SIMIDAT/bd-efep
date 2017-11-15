@@ -40,7 +40,14 @@ class QualityMeasures(var num_objetivos: Int) extends Serializable {
   private var hellinger: Float = 0
   private var coverage: Float = 0
   private var strength: Float = 0
+  private var jaccard: Float = 0
   var confusionMatrix: ConfusionMatrix = new ConfusionMatrix(1)
+
+  def getJaccard: Float = jaccard
+  def setJaccard(v: Float) = {
+    jaccard = v
+  }
+
 
   def getNVars: Double = nvars
   def setNVars(v: Double) = {

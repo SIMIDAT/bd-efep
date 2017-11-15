@@ -15,7 +15,7 @@ import java.util.BitSet
 
 
 class CromCAN(var num_genes: Int // Number of genes
-             )
+             ) extends Serializable
 {
 
   private var cromosoma = new Array[Int](num_genes) // Individual content - integer representation
