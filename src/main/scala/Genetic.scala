@@ -865,7 +865,7 @@ class Genetic extends Serializable {
             if (remain > 0) {
               if (ranking.getNumberOfSubfronts == index) {
                 front = new Population(remain, Variables.value.getNVars, num_objetivos, Examples.getNEx, RulesRep, Variables.value)
-                front = ReInitCoverage(front, Variables.value, Examples, nFile)
+                front = ReInitCoverage(front, Variables, Examples, nFile,sc)
                 remain = 0
               } else {
                 front = ranking.getSubfront(index)
@@ -951,7 +951,7 @@ class Genetic extends Serializable {
           if (remain > 0) {
             if (ranking.getNumberOfSubfronts == index) {
               front = new Population(remain, Variables.value.getNVars, num_objetivos, Examples.getNEx, RulesRep, Variables.value)
-              front = ReInitCoverage(front, Variables.value, Examples, nFile)
+              front = ReInitCoverage(front, Variables, Examples, nFile,sc)
               remain = 0
             } else {
               front = ranking.getSubfront(index)
@@ -990,7 +990,7 @@ class Genetic extends Serializable {
 
 
       for (clas <- poblac.indices) {
-        poblac(clas) = ReInitCoverage(poblac(clas), Variables.value, Examples, nFile)
+        poblac(clas) = ReInitCoverage(poblac(clas), Variables, Examples, nFile, sc)
         // Gets the best population
         /*if (Gen == 1) {
           // if it is the first generation, best is the actual one.
@@ -1065,6 +1065,8 @@ class Genetic extends Serializable {
       })
     })
 
+    auxiliar.tokenCompetition(Examples, Variables.value, this)
+
     contents = "\nGenetic Algorithm execution finished\n"
     contents += "\tNumber of Generations = " + Gen + "\n"
     contents += "\tNumber of Evaluations = " + Trials + "\n"
@@ -1077,8 +1079,8 @@ class Genetic extends Serializable {
     //result
 
     // Return the population after the token competition
+    auxiliar
 
-    auxiliar.tokenCompetition(Examples, Variables.value, this)
   }
 
   /**
@@ -1092,7 +1094,7 @@ class Genetic extends Serializable {
     * @param nFile     File to write the process
     * @return The new population for the next generation
     */
-  private def ReInitCoverage(poblac: Population, Variables: TableVar, Examples: TableDat, nFile: String): Population = {
+  private def ReInitCoverage(poblac: Population, Variables: Broadcast[TableVar], Examples: TableDat, nFile: String, sc: SparkContext): Population = {
 
     //poblac.examplesCoverPopulation(Examples.getNEx, Trials)
 
@@ -1112,20 +1114,26 @@ class Genetic extends Serializable {
       // To do token competition it is necessary to get the examples that are covered by
       // the individuals
       poblac.indivi.foreach(ind => ind.setIndivEvaluated(false))
-      val pob = poblac.tokenCompetition(Examples, Variables, this)
+      poblac.evalPop(this,Variables,Examples,sc)
+
+      val pob = poblac.tokenCompetition(Examples, Variables.value, this)
 
       // Add the individuals in poblac
-      var count = poblac.indivi.count(ind => ind.getRank == 0)
+      var count = 0
+      pob.indivi.foreach(ind => {
+        poblac.CopyIndiv(count,Examples.getNEx,getNumObjectives,ind)
+        count += 1
+      })
 
       // fill the remaining individuals by a biased initialisation
       for (conta <- count until poblac.getNumIndiv) {
         var indi: Individual = null
         if(RulesRep equalsIgnoreCase "CAN"){
-          indi = new IndCAN(Variables.getNVars, Examples.getNEx, getNumObjectives, 0)
+          indi = new IndCAN(Variables.value.getNVars, Examples.getNEx, getNumObjectives, 0)
         } else {
-          indi = new IndDNF(Variables.getNVars, Examples.getNEx, num_objetivos, Variables, poblac.getIndiv(conta).getClas)
+          indi = new IndDNF(Variables.value.getNVars, Examples.getNEx, num_objetivos, Variables.value, poblac.getIndiv(conta).getClas)
         }
-        indi.BsdInitInd(Variables,0.5.toFloat,Examples.getNEx,poblac.getIndiv(conta).getClas,"")
+        indi.BsdInitInd(Variables.value,0.5.toFloat,Examples.getNEx,poblac.getIndiv(conta).getClas,"")
         //indi.CobInitInd(poblac, Variables, Examples, porcCob, num_objetivos, poblac.getClass(0), nFile)
         //indi.evalInd(this, Variables, Examples)
         indi.setIndivEvaluated(false)

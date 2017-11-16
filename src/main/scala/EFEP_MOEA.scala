@@ -621,10 +621,7 @@ object EFEP_MOEA {
       // Broadcast the Variables structure to all mappers and execute the genetic algorithm
       val broadcastVariables = sc.broadcast(Variables)
       result = AG.GeneticAlgorithm(broadcastVariables, Ejemplos, seg_file,sc)
-      //println("GENERATION OF ELITE: " + result.ult_cambio_eval)
-      //println("NUM_Individuals: " + result.indivi.length)
 
-      result.indivi.foreach(x => x.Print(""))
       val marcar: BitSet =  if(AG.getRulesRep equalsIgnoreCase "can")
         AG.RemoveRepeatedCAN(result)
         else

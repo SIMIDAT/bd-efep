@@ -262,206 +262,210 @@ trait Individual extends Serializable{
   def computeQualityMeasures(mat: ConfusionMatrix, AG: Genetic, Examples: TableDat, Variables: TableVar): Unit = {
     mat.numVarNoInterv /= Examples.getNEx
     medidas.setNVars(Variables.getNVars - mat.numVarNoInterv)
-    //ejCompAntNoClassCrisp = ejCompAntCrisp - ejCompAntClassCrisp // Examples
-    // Compute Quality Measures:
-    // TPr
-    val tpr: Float = if ((mat.tp + mat.fn) != 0)
-      mat.tp / (mat.tp + mat.fn)
-    else
-      0
-    medidas.setTPr(tpr)
+    if(mat.numVarNoInterv < Variables.getNVars) {
+      //ejCompAntNoClassCrisp = ejCompAntCrisp - ejCompAntClassCrisp // Examples
+      // Compute Quality Measures:
+      // TPr
+      val tpr: Float = if ((mat.tp + mat.fn) != 0)
+        mat.tp / (mat.tp + mat.fn)
+      else
+        0
+      medidas.setTPr(tpr)
 
-    // FPr
-    val fpr: Float = if ((mat.fp + mat.tn) != 0)
-      mat.fp / (mat.fp + mat.tn)
-    else
-      0
+      // FPr
+      val fpr: Float = if ((mat.fp + mat.tn) != 0)
+        mat.fp / (mat.fp + mat.tn)
+      else
+        0
 
-    medidas.setFPr(fpr)
+      medidas.setFPr(fpr)
 
-    //LENGTH
-    val len: Float = if (mat.tp != 0 && mat.numVarNoInterv < Variables.getNVars)
-      1.toFloat / mat.tp
-    else
-      0
+      //LENGTH
+      val len: Float = if (mat.tp != 0 && mat.numVarNoInterv < Variables.getNVars)
+        1.toFloat / mat.tp
+      else
+        0
 
-    medidas.setLength(len)
+      medidas.setLength(len)
 
-    //SENSITIVITY (ESTO ES TPR !!!)
-    medidas.setSensitivity(tpr)
-    /*if (Examples.getExamplesClassObj != 0 && mat.numVarNoInterv < Variables.getNVars)
+      //SENSITIVITY (ESTO ES TPR !!!)
+      medidas.setSensitivity(tpr)
+      /*if (Examples.getExamplesClassObj != 0 && mat.numVarNoInterv < Variables.getNVars)
       medidas.setSensitivity(ejCompAntClassCrisp.toFloat / Examples.getExamplesClassObj)
     else
       medidas.setSensitivity(0)*/
 
-    // CONFIDENCE
-    val conf: Float = if (mat.tp + mat.fp != 0)
-      mat.tp / (mat.tp + mat.fp)
-    else
-      0
-
-    medidas.setCnf(conf)
-
-    // UNUSUALNESS (NORMALIZED)
-    val coverage = (mat.tp + mat.fp) / Examples.getNEx
-    val unus : Float = if (mat.tp + mat.fp == 0 || mat.numVarNoInterv >= Variables.getNVars)
-      0
-    else
-      coverage * (conf - ((mat.tp + mat.fn) / Examples.getNEx))
-
-    // normalize unus (Cambiar para adapatar a la representación nueva)
-    val classPercent: Float = (mat.tp + mat.fn) / Examples.getNEx
-    val minUnus: Float = (1-classPercent) * (0 - classPercent)
-    val maxUnus: Float  = classPercent * (1 - classPercent)
-    val normUnus: Float = if(maxUnus - minUnus != 0)
-      (unus - minUnus) / (maxUnus - minUnus)
-    else
-      0f
-    medidas.setUnus(normUnus)
-
-    // Coverage
-    medidas.setCoverage(coverage)
-    // GAIN
-
-    val gain: Float = if ((mat.tp + mat.fp == 0) || medidas.getSensitivity == 0)
-      if (Examples.getExamplesClass(clas) != 0)
-        medidas.getSensitivity * (0 - Math.log10(Examples.getExamplesClass(clas).toFloat / Examples.getNEx).toFloat)
+      // CONFIDENCE
+      val conf: Float = if (mat.tp + mat.fp != 0)
+        mat.tp / (mat.tp + mat.fp)
       else
         0
-    else
-      (medidas.getSensitivity * (Math.log10(medidas.getSensitivity.toDouble / coverage) - Math.log10(Examples.getExamplesClass(clas).toDouble / Examples.getNEx))).toFloat
 
-    medidas.setGain(gain)
-    medidas.setSupM(fpr)
-    medidas.setSupm(tpr)
-    medidas.setSuppDiff(tpr - fpr)
+      medidas.setCnf(conf)
 
-    // GROWTH RATE
-    if (tpr != 0 && fpr != 0)
-      medidas.setGrowthRate(tpr / fpr)
-    else if (tpr != 0 && fpr == 0)
-      medidas.setGrowthRate(Float.PositiveInfinity)
-    else
-      medidas.setGrowthRate(0)
+      // UNUSUALNESS (NORMALIZED)
+      val coverage = (mat.tp + mat.fp) / Examples.getNEx
+      val unus: Float = if (mat.tp + mat.fp == 0 || mat.numVarNoInterv >= Variables.getNVars)
+        0
+      else
+        coverage * (conf - ((mat.tp + mat.fn) / Examples.getNEx))
 
-    // FISHER
-    val fe = new FisherExact(Examples.getNEx)
-    val fisher = fe.getTwoTailedP(mat.tp.toInt, mat.fp.toInt, mat.fn.toInt, mat.tn.toInt).toFloat
-    medidas.setFisher(fisher)
+      // normalize unus (Cambiar para adapatar a la representación nueva)
+      val classPercent: Float = (mat.tp + mat.fn) / Examples.getNEx
+      val minUnus: Float = (1 - classPercent) * (0 - classPercent)
+      val maxUnus: Float = classPercent * (1 - classPercent)
+      val normUnus: Float = if (maxUnus - minUnus != 0)
+        (unus - minUnus) / (maxUnus - minUnus)
+      else
+        0f
+      medidas.setUnus(normUnus)
 
-    // HELLINGER DISTANCE
-    val parte1: Float = if (Examples.getExamplesClass(clas) != 0)
-      (Math.sqrt((mat.tp / Examples.getExamplesClass(clas))) - Math.sqrt((mat.fn / Examples.getExamplesClass(clas)))).toFloat
-    else
-      0
+      // Coverage
+      medidas.setCoverage(coverage)
+      // GAIN
 
-    val parte2: Float = if ((Examples.getNEx - Examples.getExamplesClass(clas)) != 0)
-      (Math.sqrt(mat.fp / (Examples.getNEx - Examples.getExamplesClass(clas))) - Math.sqrt(mat.tn / (Examples.getNEx - Examples.getExamplesClass(clas)))).toFloat
-    else
-      0
+      val gain: Float = if ((mat.tp + mat.fp == 0) || medidas.getSensitivity == 0)
+        if (Examples.getExamplesClass(clas) != 0)
+          medidas.getSensitivity * (0 - Math.log10(Examples.getExamplesClass(clas).toFloat / Examples.getNEx).toFloat)
+        else
+          0
+      else
+        (medidas.getSensitivity * (Math.log10(medidas.getSensitivity.toDouble / coverage) - Math.log10(Examples.getExamplesClass(clas).toDouble / Examples.getNEx))).toFloat
 
-    val dh = Math.sqrt(Math.pow(parte1, 2) + Math.pow(parte2, 2)).toFloat
-    medidas.setHellinger(dh)
+      medidas.setGain(gain)
+      medidas.setSupM(fpr)
+      medidas.setSupm(tpr)
+      medidas.setSuppDiff(tpr - fpr)
 
-    // AUC
-    val success = (1 + (mat.tp / Examples.getExamplesClass(clas)) - (mat.fp / Examples.getExamplesClass(clas))) / 2
-    medidas.setAUC(success)
+      // GROWTH RATE
+      if (tpr != 0 && fpr != 0)
+        medidas.setGrowthRate(tpr / fpr)
+      else if (tpr != 0 && fpr == 0)
+        medidas.setGrowthRate(Float.PositiveInfinity)
+      else
+        medidas.setGrowthRate(0)
 
-    // Strength
-    val strength: Float = if(medidas.getGrowthRate == Float.PositiveInfinity){
-      tpr
+      // FISHER
+      val fe = new FisherExact(Examples.getNEx)
+      val fisher = fe.getTwoTailedP(mat.tp.toInt, mat.fp.toInt, mat.fn.toInt, mat.tn.toInt).toFloat
+      medidas.setFisher(fisher)
+
+      // HELLINGER DISTANCE
+      val parte1: Float = if (Examples.getExamplesClass(clas) != 0)
+        (Math.sqrt((mat.tp / Examples.getExamplesClass(clas))) - Math.sqrt((mat.fn / Examples.getExamplesClass(clas)))).toFloat
+      else
+        0
+
+      val parte2: Float = if ((Examples.getNEx - Examples.getExamplesClass(clas)) != 0)
+        (Math.sqrt(mat.fp / (Examples.getNEx - Examples.getExamplesClass(clas))) - Math.sqrt(mat.tn / (Examples.getNEx - Examples.getExamplesClass(clas)))).toFloat
+      else
+        0
+
+      val dh = Math.sqrt(Math.pow(parte1, 2) + Math.pow(parte2, 2)).toFloat
+      medidas.setHellinger(dh)
+
+      // AUC
+      val success = (1 + (mat.tp / Examples.getExamplesClass(clas)) - (mat.fp / Examples.getExamplesClass(clas))) / 2
+      medidas.setAUC(success)
+
+      // Strength
+      val strength: Float = if (medidas.getGrowthRate == Float.PositiveInfinity) {
+        tpr
+      } else {
+        Math.pow(tpr, 2).toFloat / (tpr + fpr)
+      }
+
+      // Jaccard index
+      val jac = mat.tp.toFloat / (mat.tp + mat.fp + mat.fn).toFloat
+      medidas.setJaccard(jac)
+
     } else {
-      Math.pow(tpr, 2).toFloat / (tpr + fpr)
+      medidas = new QualityMeasures(AG.getNumObjectives)
     }
-
-    // Jaccard index
-    val jac = mat.tp / (mat.tp + mat.fp + mat.fn)
-    medidas.setJaccard(jac)
-
-    // Sets the objective measures
-    for (i <- 0 until AG.getNumObjectives) {
-      if(AG.getNObjectives(i).compareToIgnoreCase("JACCARD") == 0){
-        medidas.setObjectiveValue(i,jac)
-      }
-      if (AG.getNObjectives(i).compareToIgnoreCase("AUC") == 0)
-        medidas.setObjectiveValue(i, success)
-      if (AG.getNObjectives(i).compareToIgnoreCase("COMP") == 0 || AG.getNObjectives(i).compareToIgnoreCase("SENS") == 0 || AG.getNObjectives(i).compareToIgnoreCase("TPR") == 0)
-        medidas.setObjectiveValue(i, tpr)
-      if (AG.getNObjectives(i).compareToIgnoreCase("CSUP") == 0) {
-        val csupport = mat.tp / Examples.getNEx
-        // store the values
-        val valorComp = csupport
-        if (mat.numVarNoInterv >= Variables.getNVars)
-          medidas.setObjectiveValue(i, 0)
-        else
-          medidas.setObjectiveValue(i, valorComp)
-      }
-      if (AG.getNObjectives(i).compareToIgnoreCase("CCNF") == 0)
-        medidas.setObjectiveValue(i, conf)
-
-      if (AG.getNObjectives(i).compareToIgnoreCase("UNUS") == 0)
-        if (mat.numVarNoInterv >= Variables.getNVars)
-          medidas.setObjectiveValue(i, 0)
-        else
-          medidas.setObjectiveValue(i, normUnus)
-
-      if (AG.getNObjectives(i).compareToIgnoreCase("ACCU") == 0) {
-        val accuracy = (mat.tp + 1) / (mat.tp + mat.fp + Variables.getNClass)
-        if (mat.numVarNoInterv >= Variables.getNVars)
-          medidas.setObjectiveValue(i, 0)
-        else
-          medidas.setObjectiveValue(i, accuracy)
-      }
-      if (AG.getNObjectives(i).compareToIgnoreCase("COVE") == 0)
-        if (mat.numVarNoInterv >= Variables.getNVars)
-          medidas.setObjectiveValue(i, 0)
-        else
-          medidas.setObjectiveValue(i, coverage)
-
-
-      if (AG.getNObjectives(i).compareToIgnoreCase("CONV") == 0) {
-
-        val conviction: Float = if (mat.numVarNoInterv >= Variables.getNVars)
-          0
-        else if (mat.tp + mat.fp != 0)
-          (1 - (mat.tp / Examples.getNEx)) / (1 - (mat.tp / (mat.tp + mat.fp)))
-        else 0
-        medidas.setObjectiveValue(i, conviction)
-      }
-
-      if (AG.getNObjectives(i).compareToIgnoreCase("MEDGEO") == 0) {
-        val medgeo: Float = if (mat.numVarNoInterv >= Variables.getNVars) {
-          0
-        } else {
-
-          val tnr : Float = if ((mat.fp + mat.tn) != 0)
-            mat.tn / (mat.fp + mat.tn)
-          else
-            0
-
-          Math.sqrt(tpr * tnr).toFloat
+      // Sets the objective measures
+      for (i <- 0 until AG.getNumObjectives) {
+        if (AG.getNObjectives(i).compareToIgnoreCase("JACCARD") == 0) {
+          medidas.setObjectiveValue(i, medidas.getJaccard)
         }
-        medidas.setObjectiveValue(i, medgeo)
+        if (AG.getNObjectives(i).compareToIgnoreCase("AUC") == 0)
+          medidas.setObjectiveValue(i, medidas.getAUC)
+        if (AG.getNObjectives(i).compareToIgnoreCase("COMP") == 0 || AG.getNObjectives(i).compareToIgnoreCase("SENS") == 0 || AG.getNObjectives(i).compareToIgnoreCase("TPR") == 0)
+          medidas.setObjectiveValue(i, medidas.getTPr)
+        if (AG.getNObjectives(i).compareToIgnoreCase("CSUP") == 0) {
+          val csupport = mat.tp / Examples.getNEx
+          // store the values
+          val valorComp = csupport
+          if (mat.numVarNoInterv >= Variables.getNVars)
+            medidas.setObjectiveValue(i, 0)
+          else
+            medidas.setObjectiveValue(i, valorComp)
+        }
+        if (AG.getNObjectives(i).compareToIgnoreCase("CCNF") == 0)
+          medidas.setObjectiveValue(i, medidas.getCnf)
+
+        if (AG.getNObjectives(i).compareToIgnoreCase("UNUS") == 0)
+          if (mat.numVarNoInterv >= Variables.getNVars)
+            medidas.setObjectiveValue(i, 0)
+          else
+            medidas.setObjectiveValue(i, medidas.getUnus)
+
+        if (AG.getNObjectives(i).compareToIgnoreCase("ACCU") == 0) {
+          val accuracy = (mat.tp + 1) / (mat.tp + mat.fp + Variables.getNClass)
+          if (mat.numVarNoInterv >= Variables.getNVars)
+            medidas.setObjectiveValue(i, 0)
+          else
+            medidas.setObjectiveValue(i, accuracy)
+        }
+        if (AG.getNObjectives(i).compareToIgnoreCase("COVE") == 0)
+          if (mat.numVarNoInterv >= Variables.getNVars)
+            medidas.setObjectiveValue(i, 0)
+          else
+            medidas.setObjectiveValue(i, medidas.getCoverage)
+
+
+        if (AG.getNObjectives(i).compareToIgnoreCase("CONV") == 0) {
+
+          val conviction: Float = if (mat.numVarNoInterv >= Variables.getNVars)
+            0
+          else if (mat.tp + mat.fp != 0)
+            (1 - (mat.tp / Examples.getNEx)) / (1 - (mat.tp / (mat.tp + mat.fp)))
+          else 0
+          medidas.setObjectiveValue(i, conviction)
+        }
+
+        if (AG.getNObjectives(i).compareToIgnoreCase("MEDGEO") == 0) {
+          val medgeo: Float = if (mat.numVarNoInterv >= Variables.getNVars) {
+            0
+          } else {
+
+            val tnr: Float = if ((mat.fp + mat.tn) != 0)
+              mat.tn / (mat.fp + mat.tn)
+            else
+              0
+
+            Math.sqrt(medidas.getTPr * tnr).toFloat
+          }
+          medidas.setObjectiveValue(i, medgeo)
+        }
+
+        if (AG.getNObjectives(i).compareToIgnoreCase("GROWTH_RATE") == 0)
+          medidas.setObjectiveValue(i, medidas.getGrowthRate)
+        if (AG.getNObjectives(i).compareToIgnoreCase("FPR") == 0)
+          medidas.setObjectiveValue(i, medidas.getFPr)
+        if (AG.getNObjectives(i).compareToIgnoreCase("TPR") == 0)
+          medidas.setObjectiveValue(i, medidas.getTPr)
+        if (AG.getNObjectives(i).compareToIgnoreCase("TPR_FPR_DIFF") == 0)
+          medidas.setObjectiveValue(i, medidas.getTPr - medidas.getFPr)
+
+        if (AG.getNObjectives(i).compareToIgnoreCase("MINIMIZE_FPR") == 0) {
+          val valFPR: Float = if (medidas.getFPr == 0)
+            Float.PositiveInfinity
+          else
+            1.toFloat / medidas.getFPr
+
+          medidas.setObjectiveValue(i, valFPR)
+        }
       }
-
-      if (AG.getNObjectives(i).compareToIgnoreCase("GROWTH_RATE") == 0)
-        medidas.setObjectiveValue(i, medidas.getGrowthRate)
-      if (AG.getNObjectives(i).compareToIgnoreCase("FPR") == 0)
-        medidas.setObjectiveValue(i, fpr)
-      if (AG.getNObjectives(i).compareToIgnoreCase("TPR") == 0)
-        medidas.setObjectiveValue(i, tpr)
-      if (AG.getNObjectives(i).compareToIgnoreCase("TPR_FPR_DIFF") == 0)
-        medidas.setObjectiveValue(i, tpr - fpr)
-
-      if (AG.getNObjectives(i).compareToIgnoreCase("MINIMIZE_FPR") == 0) {
-        val valFPR: Float = if (fpr == 0)
-          Float.PositiveInfinity
-        else
-          1.toFloat / fpr
-
-        medidas.setObjectiveValue(i, valFPR)
-      }
-    }
 
     // Set the individual as evaluated
     evaluado = true

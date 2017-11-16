@@ -115,9 +115,12 @@ class Population extends Serializable {
       1
     }).sum*/
 
-
     // AQUI HAY QUE METER MAS ADELANTE BIG DATA
     val indivsToEval = indivi.filter(y => !y.getIndivEvaluated)
+
+    val pobCovered = Array.fill[PobBitSet](indivsToEval.length)(new PobBitSet(Examples.getNEx))
+    pobCovered.foreach(x => sc.register(x))
+
     //val inds = sc.broadcast(indivsToEval)
 
     val confusionMatrices = Examples.datosRDD.mapPartitions(x => {
@@ -192,7 +195,8 @@ class Population extends Serializable {
           }
 
             if(disparoCrisp > 0){
-              matrices(k).coveredExamples += index
+              pobCovered(k).add(index.toInt)
+              //matrices(k).coveredExamples += index
               //matrices(k).coveredExamples.set(index.toInt)
               matrices(k).ejAntCrisp += 1
               //mat.coveredExamples += index
@@ -249,6 +253,8 @@ class Population extends Serializable {
 
     // Now we have the complete confusion matrices of all individuals. Calculate their measures!!
     for(i <- indivsToEval.indices){
+      indivsToEval(i).cubre.clear(0,Examples.getNEx)
+      indivsToEval(i).cubre.or(pobCovered(i).value)
       //indivsToEval(i).Print("")
       indivsToEval(i).computeQualityMeasures(confusionMatrices(i),AG, Examples, Variables.value)
     }
@@ -515,7 +521,7 @@ class Population extends Serializable {
       var cubreNuevo = false
       val clas = actual.indivi(conta).getClas
 
-
+      // Posibiliad de optimizar esto?
       for (i <-0 until cubiertoRegla.size()) {
           // Get only the tokens of its class
           if(!tokens.get(i) && cubiertoRegla.get(i) && Examples.getClass(i) == clas){
@@ -569,6 +575,7 @@ class Population extends Serializable {
       case "fpr"        => indivi.map(x => x.getMeasures.getFPr.toDouble)
       case "conf"       => indivi.map(x => x.getCnfValue)
       case "growthrate" => indivi.map(x => x.getMeasures.getGrowthRate.toDouble)
+      case "jaccard"    => indivi.map(x => x.getMeasures.getJaccard.toDouble)
     }
 
     //val ordenado = indivi.map(x => x.getCrowdingDistance) // Cambiar en un futuro por la atipicidad (o lo que se crea conveniente)
