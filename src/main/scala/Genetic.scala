@@ -767,7 +767,7 @@ class Genetic extends Serializable {
     Gen = 0
 
     //Evaluates the population for the first time
-    Trials += evaluatePopulation(poblac, Variables, Examples, sc, true)
+    Trials += evaluatePopulation(poblac, Variables, Examples, sc, false)
     var count: Int = 0
     /*poblac.foreach(pop => {
       pop.indivi.foreach(ind =>{
@@ -793,8 +793,8 @@ class Genetic extends Serializable {
           var dad = 0
           var mum = 0
           if (poblac(clas).getNumIndiv != 2) {
-            val dad = Select(clas)
-            var mum = Select(clas)
+            dad = Select(clas)
+            mum = Select(clas)
             while ((dad == mum) && (poblac(clas).getNumIndiv > 1))
               mum = Select(clas)
           } else {
@@ -815,7 +815,7 @@ class Genetic extends Serializable {
       }
 
       // Evaluates the offspring
-      Trials += evaluatePopulation(offspring, Variables, Examples, sc, true)
+      Trials += evaluatePopulation(offspring, Variables, Examples, sc, false)
       /*count = 0
       offspring.foreach(pop => {
         pop.indivi.foreach(ind =>{
@@ -1051,6 +1051,7 @@ class Genetic extends Serializable {
     Trials += auxiliar.evalPop(this, Variables, Examples, sc)*/
 
     // Evaluate the population for the last time
+    poblac.foreach(p => p.indivi.foreach(ind => ind.setIndivEvaluated(false)))
     evaluatePopulation(poblac, Variables, Examples, sc, true)
 
     // Perform the token competition
@@ -1108,20 +1109,22 @@ class Genetic extends Serializable {
       // Generates new individuals
 
       // First, do token competition to keep high quality rules
+      // To do token competition it is necessary to get the examples that are covered by
+      // the individuals
+      poblac.indivi.foreach(ind => ind.setIndivEvaluated(false))
       val pob = poblac.tokenCompetition(Examples, Variables, this)
-      poblac.ej_cubiertos.clear(0, Examples.getNEx)
+
       // Add the individuals in poblac
-      var count = 0
-      pob.indivi.foreach(ind => {
-        poblac.CopyIndiv(count, Examples.getNEx, this.getNumObjectives, ind)
-        count += 1
-        poblac.ej_cubiertos.or(ind.cubre)
-      })
+      var count = poblac.indivi.count(ind => ind.getRank == 0)
 
       // fill the remaining individuals by a biased initialisation
       for (conta <- count until poblac.getNumIndiv) {
         var indi: Individual = null
-        indi = new IndDNF(Variables.getNVars, Examples.getNEx, num_objetivos, Variables, poblac.getIndiv(conta).getClas)
+        if(RulesRep equalsIgnoreCase "CAN"){
+          indi = new IndCAN(Variables.getNVars, Examples.getNEx, getNumObjectives, 0)
+        } else {
+          indi = new IndDNF(Variables.getNVars, Examples.getNEx, num_objetivos, Variables, poblac.getIndiv(conta).getClas)
+        }
         indi.BsdInitInd(Variables,0.5.toFloat,Examples.getNEx,poblac.getIndiv(conta).getClas,"")
         //indi.CobInitInd(poblac, Variables, Examples, porcCob, num_objetivos, poblac.getClass(0), nFile)
         //indi.evalInd(this, Variables, Examples)
@@ -1751,8 +1754,19 @@ class Genetic extends Serializable {
     val neje = Examples.getNEx
     val ninds = auxPob.map(p => p.length).sum
 
-    val pobCovered = Array.fill[PobBitSet](Variables.value.getNClass)(new PobBitSet(Examples.getNEx))
-    pobCovered.foreach(x => sc.register(x))
+    val pobCovered = if(!fin) {
+      // Create the BitSets that determine which examples are covered
+      // for ANY INDIVIDUAL OF THE POPULATION FOR EACH CLASS
+      val a = Array.fill[PobBitSet](Variables.value.getNClass)(new PobBitSet(Examples.getNEx))
+      a.foreach(x => sc.register(x))
+      a
+    } else {
+      // Create the BitSets that determine which examples are covered
+      // FOR EACH INDIVIDUAL
+      val a = Array.fill[PobBitSet](ninds)(new PobBitSet(Examples.getNEx))
+      a.foreach(x => sc.register(x))
+      a
+    }
 
     val confusionMatrices = Examples.datosRDD.mapPartitions(x => {
       var matrices: Array[ConfusionMatrix] = new Array[ConfusionMatrix](ninds)
@@ -1831,7 +1845,11 @@ class Genetic extends Serializable {
 
 
             if (disparoCrisp > 0) {
-              pobCovered(individual.getClas).add(index.toInt)
+              if (!fin) {
+                pobCovered(individual.getClas).add(index.toInt)
+              } else {
+                pobCovered(count).add(index.toInt)
+              }
               //matrices(count).coveredExamples += index
               //matrices(count).coveredExamples.set(index.toInt)
               matrices(count).ejAntCrisp += 1
@@ -1860,21 +1878,7 @@ class Genetic extends Serializable {
       aux.iterator
     }, true).reduce((x, y) => {
       val ret = new Array[ConfusionMatrix](y.length)
-      //println("Size of coveredExamples of 'x': " + SizeEstimator.estimate(x) / (1024.0*1024.0) + " MB.    Length: " + x.length)
-      //println("Size of coveredExamples of 'y': " + SizeEstimator.estimate(y) / (1024.0*1024.0) + " MB.    Length: " + y.length)
-
-      //trials += y.length
       var count = 0
-      /*for (i <- auxPob.indices){
-        for(j <- auxPob(i).indices){
-          //x(count).coveredExamples.foreach(value => auxPob(i)(j).cubre.set(value toInt))
-          //y(count).coveredExamples.foreach(value => auxPob(i)(j).cubre.set(value toInt))
-          //auxPob(i)(j).cubre.or(x(count).coveredExamples)
-          //auxPob(i)(j).cubre.or(y(count).coveredExamples)
-
-          count += 1
-        }
-      }*/
 
       for (i <- y.indices) {
         val toRet: ConfusionMatrix = new ConfusionMatrix(neje)
@@ -1897,20 +1901,23 @@ class Genetic extends Serializable {
 
     var count = 0
 
-    //println(pobCovered.value.cardinality())
-    //println(pobCovered.value.length())
-
     // Now we have   the complete confusion matrices of all individuals. Calculate their measures!!
     for (i <- auxPob.indices) {
       //Check if the population evolves
       poblac(i).examplesCoverPopulation(Examples.getNEx,getTrials,pobCovered(i).value)
 
       // Update ej_cubiertos estructure
-      poblac(i).ej_cubiertos.clear(0,Examples.getNEx)
-      poblac(i).ej_cubiertos.or(pobCovered(i).value)
+      if(!fin) {
+        poblac(i).ej_cubiertos.clear(0, Examples.getNEx)
+        poblac(i).ej_cubiertos.or(pobCovered(i).value)
+      }
 
       for (j <- auxPob(i).indices) {
-        //println("Cardinalidad: " +  auxPob(i)(j).cubre.cardinality())
+        if(fin) {
+          // Adds the calculated Covering BitSet to each individual
+          auxPob(i)(j).cubre.clear(0, Examples.getNEx)
+          auxPob(i)(j).cubre.or(pobCovered(count).value)
+        }
         auxPob(i)(j).computeQualityMeasures(confusionMatrices(count), this, Examples, Variables.value)
         count += 1
       }
@@ -1927,6 +1934,7 @@ class Genetic extends Serializable {
       })
     })
 
+    // Return
     ninds
 
   }
