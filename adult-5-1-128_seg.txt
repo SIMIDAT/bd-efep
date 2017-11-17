@@ -5,7 +5,7 @@ Algorithm name: NMEEFSD
 Input file name training: adult-5-1tra.dat
 Rules file name: adult-5-1-128_reg.txt
 Tracking file name: adult-5-1-128_seg.txt
-Representation of the Rules: CAN
+Representation of the Rules: DNF
 Strict dominance: YES
 Random generator seed: 1
 Selected class of the target variable: not established
@@ -22,4 +22,4 @@ One per Class: yes
 Number of objetives: 2
 	Objetive 0: TPR_FPR_DIFF
 	Objetive 1: JACCARD
-####### Total time: 38.971sec.
+####### Total time: 46.1sec.

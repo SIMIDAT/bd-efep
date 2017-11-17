@@ -44,6 +44,7 @@
     <orderEntry type="library" scope="PROVIDED" name="SBT: org.slf4j:jcl-over-slf4j:1.7.16:jar" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="SBT: org.scala-lang:scalap:2.10.6:jar" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="SBT: org.scala-lang:scala-reflect:2.10.6:jar" level="project" />
+    <orderEntry type="library" name="SBT: org.scala-lang:scala-library:2.10.6:jar" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="SBT: org.scala-lang:scala-compiler:2.10.6:jar" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="SBT: org.roaringbitmap:RoaringBitmap:0.5.11:jar" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="SBT: org.objenesis:objenesis:2.1:jar" level="project" />
@@ -179,8 +180,5 @@
     <orderEntry type="library" scope="PROVIDED" name="SBT: com.esotericsoftware:kryo-shaded:3.0.3:jar" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="SBT: com.clearspring.analytics:stream:2.7.0:jar" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="SBT: aopalliance:aopalliance:1.0:jar" level="project" />
-    <orderEntry type="library" name="scala-sdk-2.10.6" level="project" />
-    <orderEntry type="library" name="org.apache.spark:spark-core_2.10:2.2.0" level="project" />
-    <orderEntry type="library" name="org.apache.spark:spark-sql_2.10:2.2.0" level="project" />
   </component>
 </module>

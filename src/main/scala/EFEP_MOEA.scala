@@ -610,43 +610,28 @@ object EFEP_MOEA {
     // Fetch class names to save later the .tra and .tst files.
     val classNames = Variables.classNames
 
-    // This do-while loop is not necessary anymore. We already obtain rules for all classes in the genetic algorithm
-    do {
-      // Initialization of random generator seed. Done after load param values
-      if (seed != 0)
-        Randomize.setSeed(seed)
 
-      println("Processing...")
+    // Initialization of random generator seed. Done after load param values
+    if (seed != 0)
+      Randomize.setSeed(seed)
 
-      // Broadcast the Variables structure to all mappers and execute the genetic algorithm
-      val broadcastVariables = sc.broadcast(Variables)
-      result = AG.GeneticAlgorithm(broadcastVariables, Ejemplos, seg_file,sc)
+    println("Processing...")
 
-      /*val marcar: BitSet =  if(AG.getRulesRep equalsIgnoreCase "can")
-        AG.RemoveRepeatedCAN(result)
-        else
-        AG.RemoveRepeatedDNF(result, Variables)
+    // Broadcast the Variables structure to all mappers and execute the genetic algorithm
+    val broadcastVariables = sc.broadcast(Variables)
+    result = AG.GeneticAlgorithm(broadcastVariables, Ejemplos, seg_file,sc)
+
+    /*val marcar: BitSet =  if(AG.getRulesRep equalsIgnoreCase "can")
+      AG.RemoveRepeatedCAN(result)
+      else
+      AG.RemoveRepeatedDNF(result, Variables)
 
 
-      // Remove repeated rules
-      result = result.removeRepeated(marcar, Ejemplos, Variables, AG)*/
-
-      terminar = true
-
-    } while (! terminar)
-
+    // Remove repeated rules
+    result = result.removeRepeated(marcar, Ejemplos, Variables, AG)*/
 
     result.indivi.foreach(i => i.setIndivEvaluated(false))
-    val broadcastVariables = sc.broadcast(Variables)
     result.evalPop(AG,broadcastVariables, Ejemplos,sc)
-
-    //If imbalanced mode is selected, then get only the patterns of the minority class
-    /*if(imbalanced){
-      result.setNumIndiv(result.indivi.length)
-    }*/
-
-    // filter population by minimum confidence
-    //result.indivi = result.indivi.filter(ind => ind.getCnfValue >= 0.6)
 
     // Filter rules if neccesary and write rules to file
     result = FilterPopulation(result, AG.getMinCnf, Variables)
@@ -655,137 +640,15 @@ object EFEP_MOEA {
     // Save the .tra file
     //AG.CalcPobOutput(output_file_tra, result, Ejemplos, Variables, classification_type, classNames, Data.getHeader)
 
-
-    /*int maximumInd = -1;
-
-        if((conta1==0)/*||(conta2==0)||(conta3==0)||(conta4==0)){ // Filter by confidence
-            maximumInd = -1;
-            double maximumConfInd = -1;
-            for(int i=0; i<auxMax.getNumIndiv(); i++){
-                if(auxMax.getIndiv(i).getMeasures().getCnf()>maximumConfInd){
-                    maximumInd = i;
-                    maximumConfInd = auxMax.getIndiv(i).getMeasures().getCnf();
-                }
-            }
-        }
-        WriteRuleMax(auxMax, 1, AG.getNumObjectives(), NameRule, NameMeasure, cab_measure_file, 0);
-        if(conta1==0) WriteRuleMax(auxMax, maximumInd, AG.getNumObjectives(), NameRule, NameMeasure, cab_measure_file,0);
-        //if(conta2==0) WriteRuleMax(auxMax, maximumInd, AG.getNumObjectives(), NameRule, NameMeasure, cab_measure_file,1);
-        //if(conta3==0) WriteRuleMax(auxMax, maximumInd, AG.getNumObjectives(), NameRule, NameMeasure, cab_measure_file,2);
-        //if(conta4==0) WriteRuleMax(auxMax, maximumInd, AG.getNumObjectives(), NameRule, NameMeasure, cab_measure_file,3);
-*/*/
-
     time = System.currentTimeMillis - time
     val cadtime: Double = time.toDouble / 1000
     val d: DecimalFormat = new DecimalFormat("0.000")
 
     contents = "Algorithm terminated\n" + "--------------------\n" + "####### Execution time: " + d.format(cadtime) + " sec.\n"
+
     // Calculate the .tst and the quac file
     println("Calculating test results...")
     CalculateTest(output_file_tst, qmeasure_file, result, classification_type, AG.getRulesRep, sc, AG)
-
-    /*println(contents)
-    File.AddtoFile(seg_file, "\n\n" + contents)
-
-    //Calculate the quality measures
-    //val aux1_ini: String = rule_file.substring(0, rule_file.lastIndexOf("."))
-    //val aux1_fin: String = rule_file.substring(rule_file.lastIndexOf(".") + 1, rule_file.length)
-    //val aux2_ini: String = qmeasure_file.substring(0, qmeasure_file.lastIndexOf("."))
-    //val aux2_fin: String = qmeasure_file.substring(qmeasure_file.lastIndexOf(".") + 1, qmeasure_file.length)
-
-    println("Calculating values of the quality measures\n")
-
-    // Filter by min confidence and save the results
-    val confidence: Array[Individual] = result.indivi.filter(i => i.medidas.getCnf >= AG.getMinCnf)
-    val confPop = filterByConfidence(result)*/
-    //val confPop = new Population(confidence.length, Variables.getNVars, AG.getNumObjectives, Ejemplos.getNEx, AG.getRulesRep, Variables)
-    //confPop.indivi = confidence
-    //WriteRule(confPop,AG.getNumObjectives,confidence_filter_rules, confidence_filter_measure, cab_measure_file)
-    //AG.CalcPobOutput(confidence_filter_tra, confPop, Ejemplos, Variables, classification_type,classNames)
-
-    // Now, filter by chi-EPs and save the result
-
-
-    /******************************************
-                  FILTER BY MINIMALS
-     *******************************************/
-    /* var chiPop = new Population()
-    if(chi) {
-      val marcas = new Array[Boolean](result.getNumIndiv)
-      for (i <- 0 until result.getNumIndiv) {
-        for (j <- 0 until result.getNumIndiv) {
-          if (i != j && !marcas(j)) {
-            if (result.indivi(i).covers(result.indivi(j), Variables) && result.indivi(i).medidas.getGrowthRate > result.indivi(j).medidas.getGrowthRate) {
-              // individual i is minimal, check the conditions 3 and 4 in order to remove individual j
-              // Condition 3
-
-              marcas(j) = true
-            }
-          }
-        }
-      }
-
-
-      val chiP = new ArrayBuffer[Individual]()
-      for (i <- marcas.indices) {
-        if (!marcas(i)) {
-          chiP += result.indivi(i)
-        }
-      } */
-
-      //************************************************************************
-
-    /*   chiPop = new Population(chiP.length, Variables.getNVars, AG.getNumObjectives, Ejemplos.getNEx, AG.getRulesRep, Variables)
-      chiPop.indivi = chiP.toArray
-      //WriteRule(chiPop, AG.getNumObjectives, chi_filter_rules, chi_filter_measure, cab_measure_file)
-      //AG.CalcPobOutput(chi_filter_tra, chiPop, Ejemplos, Variables, classification_type, classNames)
-    }*/
-
-    /*var maxPop = new Population()
-    if(max) {
-      val marcas = new Array[Boolean](result.getNumIndiv)
-      for (i <- 0 until result.getNumIndiv) {
-        for (j <- (result.getNumIndiv -1) until 0 by -1) {
-          if (i != j && !marcas(j)) {
-            if (result.indivi(j).covers(result.indivi(i), Variables) && result.indivi(i).medidas.getGrowthRate > result.indivi(j).medidas.getGrowthRate) {
-              // individual i is minimal, check the conditions 3 and 4 in order to remove individual j
-              // Condition 3
-
-              marcas(j) = true
-            }
-          }
-        }
-      }
-
-
-      val maxP = new ArrayBuffer[Individual]()
-      for (i <- marcas.indices) {
-        if (!marcas(i)) {
-          maxP += result.indivi(i)
-        }
-      } */
-
-      //************************************************************************
-
-      //maxPop = new Population(maxP.length, Variables.getNVars, AG.getNumObjectives, Ejemplos.getNEx, AG.getRulesRep, Variables)
-      //maxPop.indivi = maxP.toArray
-      //WriteRule(maxPop, AG.getNumObjectives, max_filter_rules, max_filter_measure, cab_measure_file)
-      //AG.CalcPobOutput(max_filter_tra, chiPop, Ejemplos, Variables, classification_type, classNames)
-    //}
-    //        float cnf_min = AG.getMinCnf();
-    //        for (int cnf = 0; cnf <= 3; cnf++) {
-    //            String cnfVal = String.valueOf(Math.round(cnf_min * 10));
-    //            Calculate.Calculate(input_file_tst, aux1_ini + "_0" + cnfVal + "." + aux1_fin, aux2_ini + "_0" + cnfVal + "." + aux2_fin, Variables.getNLabel());
-    //            cnf_min += 0.10;
-    //        }
-
-
-
-    //CalculateTest(confidence_filter_tst, confidence_filter_qmeasre, confPop, classification_type, AG.getRulesRep)
-    /*if(chi)
-      CalculateTest(chi_filter_tst, chi_filter_qmeasure, chiPop, classification_type, AG.getRulesRep)
-    if(max)
-      CalculateTest(max_filter_tst, max_filter_qmeasure, maxPop, classification_type, AG.getRulesRep)*/
 
 
     val t_fin: Long = System.currentTimeMillis
