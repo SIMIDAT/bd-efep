@@ -378,6 +378,7 @@ trait Individual extends Serializable{
       // Jaccard index
       val jac = mat.tp.toFloat / (mat.tp + mat.fp + mat.fn).toFloat
       medidas.setJaccard(jac)
+      //println( "tp: " + mat.tp + " fp: " + mat.fp + " fn: " + mat.fn + "   Jaccard: " + jac)
 
     } else {
       medidas = new QualityMeasures(AG.getNumObjectives)

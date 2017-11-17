@@ -622,14 +622,14 @@ object EFEP_MOEA {
       val broadcastVariables = sc.broadcast(Variables)
       result = AG.GeneticAlgorithm(broadcastVariables, Ejemplos, seg_file,sc)
 
-      val marcar: BitSet =  if(AG.getRulesRep equalsIgnoreCase "can")
+      /*val marcar: BitSet =  if(AG.getRulesRep equalsIgnoreCase "can")
         AG.RemoveRepeatedCAN(result)
         else
         AG.RemoveRepeatedDNF(result, Variables)
 
 
       // Remove repeated rules
-      result = result.removeRepeated(marcar, Ejemplos, Variables, AG)
+      result = result.removeRepeated(marcar, Ejemplos, Variables, AG)*/
 
       terminar = true
 
@@ -645,9 +645,11 @@ object EFEP_MOEA {
       result.setNumIndiv(result.indivi.length)
     }*/
 
+    // filter population by minimum confidence
+    //result.indivi = result.indivi.filter(ind => ind.getCnfValue >= 0.6)
+
     // Filter rules if neccesary and write rules to file
-    //if (confidence_filter)
-    // allRules = FilterPopulation(allRules, AG.getMinCnf)
+    result = FilterPopulation(result, AG.getMinCnf, Variables)
     WriteRule(result, AG.getNumObjectives, NameRule, NameMeasure)
 
     // Save the .tra file
@@ -1310,42 +1312,48 @@ object EFEP_MOEA {
   }
 
 
+  /**
+    * Filter the population by minimum confidence.
+    *
+    * NOTE: It keeps at least one individual for each class, even if such individual reaches the minimum confidence level or not
+    * @param pob
+    * @param minCnf
+    * @return
+    */
+  def FilterPopulation(pob: Population, minCnf: Double, Variables: TableVar): Population = {
 
 
+      // get individuals of the class
+      val marcas: BitSet = new BitSet(pob.getNumIndiv)
+      var conta = Array.fill[Int](Variables.getNClass)(0)
 
-
-
-  def FilterPopulation(pob: Array[Population], minCnf: Double): Array[Population] = {
-    for (clase <- pob.indices) {
-        val marcas: BitSet = new BitSet(pob(clase).getNumIndiv)
-        var conta: Int = 0
-       for(i <- pob(clase).indivi.indices) {
-            val Result: QualityMeasures = pob(clase).getIndiv(i).getMeasures
+       for(i <- pob.indivi.indices) {
+            val Result: QualityMeasures = pob.getIndiv(i).getMeasures
             if (Result.getCnf > minCnf) {
               marcas.clear(i)
-              conta += 1
+              conta(pob.getIndiv(i).getClas) += 1
             } else {
               marcas.set(i)
             }
         }
         // If all rules of a given class can't pass the confidence filter, return the individual with the best
         // confidence
-        if (conta == 0) {
-          var maximumInd: Int = -1
-          var maximumConfInd: Double = -1
-          for(i <- 0 until pob(clase).getNumIndiv) {
-              if (pob(clase).getIndiv(i).getMeasures.getCnf > maximumConfInd) {
-                maximumInd = i
-                maximumConfInd = pob(clase).getIndiv(i).getMeasures.getCnf
+        for(i <- 0 until Variables.getNClass) {
+          if (conta(i) == 0) {
+            var maximumInd: Int = -1
+            var maximumConfInd: Double = -1
+            for (j <- pob.indivi.indices) {
+              if (pob.getIndiv(j).getMeasures.getCnf > maximumConfInd && pob.getIndiv(j).getClas == i) {
+                maximumInd = j
+                maximumConfInd = pob.getIndiv(j).getMeasures.getCnf
               }
-          }
-          marcas.set(maximumInd, 0) // the best individual is not removed
+            }
+            marcas.clear(maximumInd) // the best individual is not removed
 
+          }
         }
         // Remove marked examples (those that don't have the minimum confidence)
-        pob(clase) = pob(clase).removeRepeated(marcas, Ejemplos, Variables, AG)
-    }
-    pob
+    pob.removeRepeated(marcas, Ejemplos, Variables, AG)
   }
 
 

@@ -14,11 +14,12 @@ Number of evaluations: 10000
 Number of individuals in the Population: 51
 Cross probability: 0.6
 Mutation probability: 0.1
-Diversity: JACCARD
+Diversity: WRACC
 Perform ReInitCob: yes
 Percentage of the ReInitCob: 0.5
 Minimum confidence threshold: 0.6
 One per Class: yes
 Number of objetives: 2
-	Objetive 0: TPR
-	Objetive 1: MINIMIZE_FPR
+	Objetive 0: TPR_FPR_DIFF
+	Objetive 1: JACCARD
+####### Total time: 38.971sec.

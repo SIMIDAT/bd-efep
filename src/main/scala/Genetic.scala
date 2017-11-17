@@ -1065,7 +1065,7 @@ class Genetic extends Serializable {
       })
     })
 
-    auxiliar.tokenCompetition(Examples, Variables.value, this)
+    val toReturn = auxiliar.tokenCompetition(Examples, Variables.value, this)
 
     contents = "\nGenetic Algorithm execution finished\n"
     contents += "\tNumber of Generations = " + Gen + "\n"
@@ -1079,7 +1079,7 @@ class Genetic extends Serializable {
     //result
 
     // Return the population after the token competition
-    auxiliar
+    toReturn
 
   }
 

@@ -152,6 +152,7 @@ class QualityMeasures(var num_objetivos: Int) extends Serializable {
     this.fisher = qmeasures.fisher
     this.hellinger = qmeasures.hellinger
     this.coverage = qmeasures.coverage
+    this.jaccard = qmeasures.jaccard
     this.confusionMatrix = qmeasures.confusionMatrix
   }
 
