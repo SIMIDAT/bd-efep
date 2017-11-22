@@ -180,5 +180,6 @@
     <orderEntry type="library" scope="PROVIDED" name="SBT: com.esotericsoftware:kryo-shaded:3.0.3:jar" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="SBT: com.clearspring.analytics:stream:2.7.0:jar" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="SBT: aopalliance:aopalliance:1.0:jar" level="project" />
+    <orderEntry type="library" name="scala-sdk-2.10.6" level="project" />
   </component>
 </module>
