@@ -865,7 +865,7 @@ class Genetic extends Serializable {
             if (remain > 0) {
               if (ranking.getNumberOfSubfronts == index) {
                 front = new Population(remain, Variables.value.getNVars, num_objetivos, Examples.getNEx, RulesRep, Variables.value)
-                front = ReInitCoverage(front, Variables, Examples, nFile,sc)
+                front = ReInitCoverage(front, Variables, Examples, nFile,sc, ranking)
                 remain = 0
               } else {
                 front = ranking.getSubfront(index)
@@ -951,7 +951,7 @@ class Genetic extends Serializable {
           if (remain > 0) {
             if (ranking.getNumberOfSubfronts == index) {
               front = new Population(remain, Variables.value.getNVars, num_objetivos, Examples.getNEx, RulesRep, Variables.value)
-              front = ReInitCoverage(front, Variables, Examples, nFile,sc)
+              front = ReInitCoverage(front, Variables, Examples, nFile,sc, ranking)
               remain = 0
             } else {
               front = ranking.getSubfront(index)
@@ -990,8 +990,51 @@ class Genetic extends Serializable {
 
 
       for (clas <- poblac.indices) {
-        poblac(clas) = ReInitCoverage(poblac(clas), Variables, Examples, nFile, sc)
+        poblac(clas) = ReInitCoverage(poblac(clas), Variables, Examples, nFile, sc, ranking)
+        // Gets the best population
+        /*if (Gen == 1) {
+          // if it is the first generation, best is the actual one.
+          best(clas) = new Population(poblac(clas).getNumIndiv, Variables.value.getNVars, num_objetivos, Examples.getNEx, RulesRep, Variables.value)
+
+
+          // Copy poblac in best
+            for(j <- 0 until poblac(clas).getNumIndiv){
+              best(clas).CopyIndiv(j, Examples.getNEx, this.getNumObjectives, poblac(clas).getIndiv(j))
+              best(clas).ult_cambio_eval = 1
+            }
+
+        } else {
+
+          // If not, for each bucket we check if its population evolves
+          // and perform the token competition and reinitialisation if necessary
+          // If it is not the first generation:
+          // See if the population evolves (i.e. it covers new examples)
+            poblac(clas).examplesCoverPopulation(Examples.getNEx, Trials)
+            val pctCambio = (n_eval * 5) / 100
+            // If the population does not evolve for a 5 % of the total evaluations
+            if (Trials - poblac(clas).getLastChangeEval > pctCambio) {
+              // Join the elite population and the pareto front
+              //val join: Population = best(clas).join(ranking.getSubfront(0), Examples, Variables, this)
+              // best is a new population made by the token competition procedure.
+              //val aux = join.tokenCompetition(Examples, Variables, this, true)
+
+              // Cooperation schema, if the average unuasualness is better than the elite population, overwrite it
+              /*if(best(clas).getGlobalWRAcc > aux.getGlobalWRAcc){
+                best(clas) = aux
+                best(clas).ult_cambio_eval = Gen
+              } else if(best(clas).getGlobalWRAcc == aux.getGlobalWRAcc && aux.getNumIndiv < best(clas).getNumIndiv) {
+                best(clas) = aux
+                best(clas).ult_cambio_eval = Gen
+              }*/
+            }*/
+
       }
+
+      // Re-initialisation based on coverage
+      //if (getReInitCob.compareTo("yes") == 0)
+
+
+      //} // if
 
     } while (Trials <= n_eval)
 
@@ -1022,7 +1065,7 @@ class Genetic extends Serializable {
       })
     })
 
-    val toReturn = auxiliar.tokenCompetition(Examples, Variables.value, this)
+    auxiliar.tokenCompetition(Examples, Variables.value, this)
 
     contents = "\nGenetic Algorithm execution finished\n"
     contents += "\tNumber of Generations = " + Gen + "\n"
@@ -1036,7 +1079,7 @@ class Genetic extends Serializable {
     //result
 
     // Return the population after the token competition
-    toReturn
+    auxiliar
 
   }
 
@@ -1051,7 +1094,7 @@ class Genetic extends Serializable {
     * @param nFile     File to write the process
     * @return The new population for the next generation
     */
-  private def ReInitCoverage(poblac: Population, Variables: Broadcast[TableVar], Examples: TableDat, nFile: String, sc: SparkContext): Population = {
+  private def ReInitCoverage(poblac: Population, Variables: Broadcast[TableVar], Examples: TableDat, nFile: String, sc: SparkContext, rank: Ranking): Population = {
 
     //poblac.examplesCoverPopulation(Examples.getNEx, Trials)
 
@@ -1067,20 +1110,21 @@ class Genetic extends Serializable {
       //            }
       // Generates new individuals
 
-      // First, do token competition to keep high quality rules
-      // To do token competition it is necessary to get the examples that are covered by
-      // the individuals
-      poblac.indivi.foreach(ind => ind.setIndivEvaluated(false))
-      poblac.evalPop(this,Variables,Examples,sc)
 
-      val pob = poblac.tokenCompetition(Examples, Variables.value, this)
+      val marks = if(RulesRep equalsIgnoreCase("CAN")){
+        RemoveRepeatedCAN(rank.getSubfront(0))
+      } else {
+        RemoveRepeatedDNF(rank.getSubfront(0), Variables.value)
+      }
+
+      val pob = rank.getSubfront(0).removeRepeated(marks,Examples, Variables.value,this)
 
       // Add the individuals in poblac
       var count = 0
-      pob.indivi.foreach(ind => {
-        poblac.CopyIndiv(count,Examples.getNEx,getNumObjectives,ind)
+      while(count < pob.getNumIndiv && count < poblac.getNumIndiv){
+        poblac.CopyIndiv(count,Examples.getNEx,getNumObjectives,pob.getIndiv(count))
         count += 1
-      })
+      }
 
       // fill the remaining individuals by a biased initialisation
       for (conta <- count until poblac.getNumIndiv) {
@@ -1090,7 +1134,9 @@ class Genetic extends Serializable {
         } else {
           indi = new IndDNF(Variables.value.getNVars, Examples.getNEx, num_objetivos, Variables.value, poblac.getIndiv(conta).getClas)
         }
-        indi.BsdInitInd(Variables.value,0.7.toFloat,Examples.getNEx,poblac.getIndiv(conta).getClas,"")
+        indi.BsdInitInd(Variables.value,0.5.toFloat,Examples.getNEx,poblac.getIndiv(conta).getClas,"")
+        //indi.CobInitInd(poblac, Variables, Examples, porcCob, num_objetivos, poblac.getClass(0), nFile)
+        //indi.evalInd(this, Variables, Examples)
         indi.setIndivEvaluated(false)
         indi.setNEval(Trials)
         Trials += 1
@@ -1174,6 +1220,243 @@ class Genetic extends Serializable {
   }
 
 
+  /*
+  /**
+  * <p>
+  * Calculates the knee value. This function is only valid for two objectives
+  * </p>
+  *
+  * @param population The actual population
+  * @param nobj       The number of objectives
+  */
+  private def CalculateKnee(pop: Population, nobj: Int)
+  {
+  var i = 0
+  var j = 0
+  var izq = 0
+  var der = 0
+  var a = .0
+  var b = .0
+  var c = .0
+  val pi2 = 1.5707963267948966
+  val size = pop.getNumIndiv
+  if (size == 0) return
+  if (size == 1) {
+  pop.getIndiv(0).setCrowdingDistance(Double.POSITIVE_INFINITY)
+  return
+  } // if
+  if (size == 2) {
+  pop.getIndiv(0).setCrowdingDistance(Double.POSITIVE_INFINITY)
+  pop.getIndiv(1).setCrowdingDistance(Double.POSITIVE_INFINITY)
+  return
+  } // if
+  i = 0
+  while (i < size) {
+  {
+    pop.getIndiv(i).setCrowdingDistance(0.0)
+  }
+  {
+    i += 1; i - 1
+  }
+  }
+  val ordenado = new Array[Double](size)
+  val ordenado2 = new Array[Double](size)
+  val indices = new Array[Int](size)
+  val indices2 = new Array[Int](size)
+  i = 0
+  izq = 0
+  der = size - 1
+  var medidas = new QualityMeasures(nobj)
+  j = 0
+  while (j < size) {
+  {
+    indices(j) = j
+    medidas = pop.getIndiv(j).getMeasures
+    ordenado(j) = medidas.getObjectiveValue(0)
+  }
+  {
+    j += 1; j - 1
+  }
+  }
+  i = 1
+  izq = 0
+  der = size - 1
+  j = 0
+  while (j < size) {
+  {
+    indices2(j) = j
+    medidas = pop.getIndiv(j).getMeasures
+    ordenado2(j) = medidas.getObjectiveValue(1)
+  }
+  {
+    j += 1; j - 1
+  }
+  }
+  Utils.OrCrecIndex(ordenado, izq, der, indices)
+  Utils.OrCrecIndex(ordenado2, izq, der, indices2)
+  j = 0
+  while (j < pop.getNumIndiv) {
+  {
+    izq = j - 1
+    while (izq >= 0 && pop.getIndiv(indices2(izq)).getMeasures.getObjectiveValue(1) == pop.getIndiv(indices2(j)).getMeasures.getObjectiveValue(1) && pop.getIndiv(indices2(izq)).getMeasures.getObjectiveValue(0) == pop.getIndiv(indices2(j)).getMeasures.getObjectiveValue(0)) {
+      izq -= 1; izq + 1
+    }
+    der = j
+    while (der < size && pop.getIndiv(indices2(der)).getMeasures.getObjectiveValue(1) == pop.getIndiv(indices2(j)).getMeasures.getObjectiveValue(1) && pop.getIndiv(indices2(der)).getMeasures.getObjectiveValue(0) == pop.getIndiv(indices2(j)).getMeasures.getObjectiveValue(0)) {
+      der += 1; der - 1
+    }
+    pop.getIndiv(indices2(j)).setCrowdingDistance(pi2)
+    if (izq < 0) {
+      val valor = pop.getIndiv(indices2(j)).getCrowdingDistance
+      pop.getIndiv(indices2(j)).setCrowdingDistance(valor + pi2)
+    }
+    else {
+      b = (pop.getIndiv(indices2(izq)).getMeasures.getObjectiveValue(0) - pop.getIndiv(indices2(j)).getMeasures.getObjectiveValue(0)) / (pop.getIndiv(indices(pop.getNumIndiv - 1)).getMeasures.getObjectiveValue(0) - pop.getIndiv(indices(0)).getMeasures.getObjectiveValue(0))
+      c = (pop.getIndiv(indices2(j)).getMeasures.getObjectiveValue(1) - pop.getIndiv(indices2(izq)).getMeasures.getObjectiveValue(1)) / (pop.getIndiv(indices2(pop.getNumIndiv - 1)).getMeasures.getObjectiveValue(1) - pop.getIndiv(indices2(0)).getMeasures.getObjectiveValue(0) * 1.0)
+      a = Math.sqrt(b * b + c * c)
+      val valor = pop.getIndiv(indices2(j)).getCrowdingDistance
+      pop.getIndiv(indices2(j)).setCrowdingDistance(valor + Math.asin(b / a))
+    }
+    if (der >= pop.getNumIndiv) {
+      val valor = pop.getIndiv(indices2(j)).getCrowdingDistance
+      pop.getIndiv(indices2(j)).setCrowdingDistance(valor + pi2)
+    }
+    else {
+      b = (pop.getIndiv(indices2(j)).getMeasures.getObjectiveValue(0) - pop.getIndiv(indices2(der)).getMeasures.getObjectiveValue(0)) / (pop.getIndiv(indices(pop.getNumIndiv - 1)).getMeasures.getObjectiveValue(0) - pop.getIndiv(indices(0)).getMeasures.getObjectiveValue(0))
+      c = (pop.getIndiv(indices2(der)).getMeasures.getObjectiveValue(0) - pop.getIndiv(indices2(j)).getMeasures.getObjectiveValue(1)) / (pop.getIndiv(indices2(pop.getNumIndiv - 1)).getMeasures.getObjectiveValue(1) - pop.getIndiv(indices2(0)).getMeasures.getObjectiveValue(1) * 1.0)
+      a = Math.sqrt(b * b + c * c)
+      val valor = pop.getIndiv(indices2(j)).getCrowdingDistance
+      pop.getIndiv(indices2(j)).setCrowdingDistance(valor + Math.asin(c / a))
+    }
+  }
+  {
+    j += 1; j - 1
+  }
+  }
+  }
+
+  /**
+  * <p>
+  * Calculates the utility value. This function is only valid for two
+  * objectives
+  * </p>
+  *
+  * @param population The actual population
+  * @param nobj       The number of objectives
+  */
+  private def CalculateUtility(pop: Population, nobj: Int)
+  {
+  val size = pop.getNumIndiv
+  if (size == 0) return
+  if (size == 1) {
+  pop.getIndiv(0).setCrowdingDistance(Double.POSITIVE_INFINITY)
+  return
+  } // if
+  if (size == 2) {
+  pop.getIndiv(0).setCrowdingDistance(Double.POSITIVE_INFINITY)
+  pop.getIndiv(1).setCrowdingDistance(Double.POSITIVE_INFINITY)
+  return
+  }
+  // if
+  var i = 0
+  while (i < size) {
+  {
+    pop.getIndiv(i).setCrowdingDistance(0.0)
+  }
+  {
+    i += 1; i - 1
+  }
+  }
+  val ordenado = new Array[Double](size)
+  val ordenado2 = new Array[Double](size)
+  val indices = new Array[Int](size)
+  val indices2 = new Array[Int](size)
+  var izq = 0
+  var der = size - 1
+  var medidas = new QualityMeasures(nobj)
+  var j = 0
+  while (j < size) {
+  {
+    indices(j) = j
+    medidas = pop.getIndiv(j).getMeasures
+    ordenado(j) = medidas.getObjectiveValue(0)
+  }
+  {
+    j += 1; j - 1
+  }
+  }
+  izq = 0
+  der = size - 1
+  var j = 0
+  while (j < size) {
+  {
+    indices2(j) = j
+    medidas = pop.getIndiv(j).getMeasures
+    ordenado2(j) = medidas.getObjectiveValue(1)
+  }
+  {
+    j += 1; j - 1
+  }
+  }
+  Utils.OrCrecIndex(ordenado, izq, der, indices)
+  Utils.OrCrecIndex(ordenado2, izq, der, indices2)
+  if (pop.getIndiv(indices2(size - 1)).getMeasures.getObjectiveValue(1) != pop.getIndiv(indices2(0)).getMeasures.getObjectiveValue(1)) {
+  var i = 0
+  while (i < long_lambda) {
+    {
+      var min = 0
+      var k = 0
+      while (k < nobj) {
+        {
+          if (k == 0) min += lambda(i)(k) * ((pop.getIndiv(indices2(0)).getMeasures.getObjectiveValue(k) - pop.getIndiv(indices(0)).getMeasures.getObjectiveValue(k)) / (pop.getIndiv(indices(size - 1)).getMeasures.getObjectiveValue(k) - pop.getIndiv(indices(0)).getMeasures.getObjectiveValue(k)))
+          else min += lambda(i)(k) * ((pop.getIndiv(indices2(0)).getMeasures.getObjectiveValue(k) - pop.getIndiv(indices2(0)).getMeasures.getObjectiveValue(k)) / (pop.getIndiv(indices2(size - 1)).getMeasures.getObjectiveValue(k) - pop.getIndiv(indices2(0)).getMeasures.getObjectiveValue(k)))
+        }
+        {
+          k += 1; k - 1
+        }
+      }
+      var posmin = 0
+      var second = Double.POSITIVE_INFINITY
+      var possecond = -1
+      var j = 1
+      while (j < size) {
+        {
+          var temp = 0.0
+          var k = 0
+          while (k < nobj) {
+            {
+              if (k == 0) temp += lambda(i)(k) * ((pop.getIndiv(indices2(j)).getMeasures.getObjectiveValue(k) - pop.getIndiv(indices(0)).getMeasures.getObjectiveValue(k)) / (pop.getIndiv(indices(size - 1)).getMeasures.getObjectiveValue(k) - pop.getIndiv(indices(0)).getMeasures.getObjectiveValue(k)))
+              else temp += lambda(i)(k) * ((pop.getIndiv(indices2(j)).getMeasures.getObjectiveValue(k) - pop.getIndiv(indices2(0)).getMeasures.getObjectiveValue(k)) / (pop.getIndiv(indices2(size - 1)).getMeasures.getObjectiveValue(k) - pop.getIndiv(indices2(0)).getMeasures.getObjectiveValue(k)))
+            }
+            {
+              k += 1; k - 1
+            }
+          }
+          if (temp < min) {
+            second = min
+            possecond = posmin
+            min = temp
+            posmin = j
+          }
+          else if (temp < second) {
+            second = temp
+            possecond = j
+          }
+        }
+        {
+          j += 1; j - 1
+        }
+      }
+      val crowding = pop.getIndiv(indices2(posmin)).getCrowdingDistance
+      pop.getIndiv(indices2(posmin)).setCrowdingDistance(crowding + (second - min))
+    }
+    {
+      i += 1; i - 1
+    }
+  }
+  }
+  }
+  */
   /**
     * <p>
     * Eliminates the repeated individuals for canonical representation
@@ -1483,14 +1766,14 @@ class Genetic extends Serializable {
     val pobCovered = if(!fin) {
       // Create the BitSets that determine which examples are covered
       // for ANY INDIVIDUAL OF THE POPULATION FOR EACH CLASS
-      val a = Array.fill[PobBitSet](Variables.value.getNClass)(new PobBitSet(Examples.getNEx))
-      a.foreach(x => sc.register(x))
+      val a = Array.fill[BitSet](Variables.value.getNClass)(new BitSet(Examples.getNEx))
+      //a.foreach(x => sc.register(x))
       a
     } else {
       // Create the BitSets that determine which examples are covered
       // FOR EACH INDIVIDUAL
-      val a = Array.fill[PobBitSet](ninds)(new PobBitSet(Examples.getNEx))
-      a.foreach(x => sc.register(x))
+      val a = Array.fill[BitSet](ninds)(new BitSet(Examples.getNEx))
+      //a.foreach(x => sc.register(x))
       a
     }
 
@@ -1571,12 +1854,12 @@ class Genetic extends Serializable {
 
 
             if (disparoCrisp > 0) {
-              if (!fin) {
+              /*if (!fin) {
                 pobCovered(individual.getClas).add(index.toInt)
               } else {
                 pobCovered(count).add(index.toInt)
-              }
-              //matrices(count).coveredExamples += index
+              }*/
+              matrices(count).coveredExamples += index
               //matrices(count).coveredExamples.set(index.toInt)
               matrices(count).ejAntCrisp += 1
               //mat.coveredExamples += index
@@ -1608,6 +1891,14 @@ class Genetic extends Serializable {
 
       for (i <- y.indices) {
         val toRet: ConfusionMatrix = new ConfusionMatrix(neje)
+        //println("Size of data : " + ((SizeEstimator.estimate(x) + SizeEstimator.estimate(y)) / (1024*1024)) + " MiB")
+        if (!fin) {
+          x(i).coveredExamples.foreach(z => pobCovered(i / long_poblacion).set(z.toInt))
+          y(i).coveredExamples.foreach(z => pobCovered(i / long_poblacion).set(z.toInt))
+        } else {
+          x(i).coveredExamples.foreach(z => pobCovered(i).set(z.toInt))
+          y(i).coveredExamples.foreach(z => pobCovered(i).set(z.toInt))
+        }
 
         toRet.ejAntClassCrisp = x(i).ejAntClassCrisp + y(i).ejAntClassCrisp
         toRet.ejAntClassNewCrisp = x(i).ejAntClassNewCrisp + y(i).ejAntClassNewCrisp
@@ -1624,25 +1915,25 @@ class Genetic extends Serializable {
       ret
     })
 
-
+    //pobCovered.foreach(z => println("Cardinalidad: " + z.cardinality()))
     var count = 0
 
     // Now we have   the complete confusion matrices of all individuals. Calculate their measures!!
     for (i <- auxPob.indices) {
       //Check if the population evolves
-      poblac(i).examplesCoverPopulation(Examples.getNEx,getTrials,pobCovered(i).value)
+      poblac(i).examplesCoverPopulation(Examples.getNEx,getTrials,pobCovered(i))
 
       // Update ej_cubiertos estructure
       if(!fin) {
         poblac(i).ej_cubiertos.clear(0, Examples.getNEx)
-        poblac(i).ej_cubiertos.or(pobCovered(i).value)
+        poblac(i).ej_cubiertos.or(pobCovered(i))
       }
 
       for (j <- auxPob(i).indices) {
         if(fin) {
           // Adds the calculated Covering BitSet to each individual
           auxPob(i)(j).cubre.clear(0, Examples.getNEx)
-          auxPob(i)(j).cubre.or(pobCovered(count).value)
+          auxPob(i)(j).cubre.or(pobCovered(count))
         }
         auxPob(i)(j).computeQualityMeasures(confusionMatrices(count), this, Examples, Variables.value)
         count += 1

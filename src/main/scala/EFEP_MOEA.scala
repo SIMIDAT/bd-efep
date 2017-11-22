@@ -571,10 +571,10 @@ object EFEP_MOEA {
     val chiThreshols = 3.84
 
     // Initialise the Spark Context
-    //val conf = new SparkConf().setAppName("MOEA_BigData").set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+    val conf = new SparkConf().setAppName("MOEA_BigData").set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
 
     // Only for debug
-    val conf = new SparkConf().setMaster("local[*]").setAppName("MOEA_BigData").set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+    //val conf = new SparkConf().setMaster("local[*]").setAppName("MOEA_BigData").set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
 
     val sc = new SparkContext(conf)
 
