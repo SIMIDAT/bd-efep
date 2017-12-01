@@ -898,11 +898,13 @@ class Genetic extends Serializable {
             } // for
             remain = 0
           }
+          poblac(clas) = ReInitCoverage(poblac(clas), Variables, Examples, nFile, sc, ranking)
         }
 
       } else {
 
         // Perform the front ordering globally
+        // By default, this behaviour is not used in this algorithm
         val P_t: Population = new Population(long_poblacion * 2, Variables.value.getNVars, num_objetivos, Examples.getNEx, RulesRep, Variables.value)
         var count = 0
         // Join all individuals in union into a single population
@@ -912,13 +914,6 @@ class Genetic extends Serializable {
             count += 1
           })
         })
-
-        /*// Make poblac bigger in order to fit all possible individuals of the ranking
-        poblac = poblac.map(p => {
-          val aux = new Population(long_poblacion * 2, Variables.getNVars, num_objetivos, Examples.getNEx, RulesRep, Variables)
-          aux.setNumIndiv(0)
-          aux
-        })*/
 
         // Perform the ranking
         ranking = new Ranking(P_t, Variables.value, num_objetivos, Examples.getNEx, RulesRep, StrictDominance)
@@ -985,50 +980,12 @@ class Genetic extends Serializable {
           remain = 0
         }
 
-        // Here is where you check if all buckets have, at least, one individual.
-      }
-
-
-      for (clas <- poblac.indices) {
-        poblac(clas) = ReInitCoverage(poblac(clas), Variables, Examples, nFile, sc, ranking)
-        // Gets the best population
-        /*if (Gen == 1) {
-          // if it is the first generation, best is the actual one.
-          best(clas) = new Population(poblac(clas).getNumIndiv, Variables.value.getNVars, num_objetivos, Examples.getNEx, RulesRep, Variables.value)
-
-
-          // Copy poblac in best
-            for(j <- 0 until poblac(clas).getNumIndiv){
-              best(clas).CopyIndiv(j, Examples.getNEx, this.getNumObjectives, poblac(clas).getIndiv(j))
-              best(clas).ult_cambio_eval = 1
-            }
-
-        } else {
-
-          // If not, for each bucket we check if its population evolves
-          // and perform the token competition and reinitialisation if necessary
-          // If it is not the first generation:
-          // See if the population evolves (i.e. it covers new examples)
-            poblac(clas).examplesCoverPopulation(Examples.getNEx, Trials)
-            val pctCambio = (n_eval * 5) / 100
-            // If the population does not evolve for a 5 % of the total evaluations
-            if (Trials - poblac(clas).getLastChangeEval > pctCambio) {
-              // Join the elite population and the pareto front
-              //val join: Population = best(clas).join(ranking.getSubfront(0), Examples, Variables, this)
-              // best is a new population made by the token competition procedure.
-              //val aux = join.tokenCompetition(Examples, Variables, this, true)
-
-              // Cooperation schema, if the average unuasualness is better than the elite population, overwrite it
-              /*if(best(clas).getGlobalWRAcc > aux.getGlobalWRAcc){
-                best(clas) = aux
-                best(clas).ult_cambio_eval = Gen
-              } else if(best(clas).getGlobalWRAcc == aux.getGlobalWRAcc && aux.getNumIndiv < best(clas).getNumIndiv) {
-                best(clas) = aux
-                best(clas).ult_cambio_eval = Gen
-              }*/
-            }*/
+        // Check if the population should reinitilise
 
       }
+
+
+
 
       // Re-initialisation based on coverage
       //if (getReInitCob.compareTo("yes") == 0)
@@ -1899,6 +1856,8 @@ class Genetic extends Serializable {
           x(i).coveredExamples.foreach(z => pobCovered(i).set(z.toInt))
           y(i).coveredExamples.foreach(z => pobCovered(i).set(z.toInt))
         }
+        x(i).coveredExamples.clear()
+        y(i).coveredExamples.clear()
 
         toRet.ejAntClassCrisp = x(i).ejAntClassCrisp + y(i).ejAntClassCrisp
         toRet.ejAntClassNewCrisp = x(i).ejAntClassNewCrisp + y(i).ejAntClassNewCrisp

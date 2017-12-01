@@ -509,9 +509,6 @@ class Population extends Serializable {
 
     val tokens: BitSet = new BitSet(Examples.getNEx)
 
-
-
-
     var conta = 0
     var todosCubiertos = false
     // Apply token competition procedure
@@ -540,6 +537,12 @@ class Population extends Serializable {
 
       conta += 1
     } while (conta < getNumIndiv && !todosCubiertos)
+
+    // Assert that it is at least one individual in the population
+    if(rules.isEmpty){
+      // Add the individual with the less number of examples??
+      // TO-DO
+    }
 
     // Creates the result population
     val result: Population = new Population(rules.size, Variables.getNVars, GA.getNumObjectives, Examples.getNEx, GA.getRulesRep, Variables)
