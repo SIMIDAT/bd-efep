@@ -2,7 +2,7 @@
 
 In this repository the source code of the BD-EFEP algorithm is presented. Please cite this work as:
 
-*citation not available yet*
+*García-Vico, Á. M., González, P., Carmona, C. J., & del Jesus, M. J. (In Press). A Big Data Approach for the Extraction of Fuzzy Emerging Patterns. Cognitive Computation, 1-18.*
 
 ## Compile
 
